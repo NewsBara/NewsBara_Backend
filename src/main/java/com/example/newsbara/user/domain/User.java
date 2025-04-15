@@ -2,7 +2,7 @@ package com.example.newsbara.user.domain;
 
 import com.example.newsbara.badge.domain.Badge;
 import com.example.newsbara.global.common.BaseEntity;
-import com.example.newsbara.history.domain.History;
+import com.example.newsbara.history.domain.WatchHistory;
 import com.example.newsbara.rank.domain.Rank;
 import com.example.newsbara.score.domain.Score;
 import jakarta.persistence.*;
@@ -50,7 +50,7 @@ public class User extends BaseEntity {
     private List<Score> scores = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<History> histories = new ArrayList<>();
+    private List<WatchHistory> histories = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<Rank> ranks = new ArrayList<>();

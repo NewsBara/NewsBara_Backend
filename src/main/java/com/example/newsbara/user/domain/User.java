@@ -6,17 +6,16 @@ import com.example.newsbara.history.domain.WatchHistory;
 import com.example.newsbara.rank.domain.Rank;
 import com.example.newsbara.score.domain.Score;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "User")
 @Getter
-@NoArgsConstructor
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
 public class User extends BaseEntity {

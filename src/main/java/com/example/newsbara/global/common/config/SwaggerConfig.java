@@ -19,7 +19,7 @@ public class SwaggerConfig {
                 .description("영어 뉴스 동영상 기반 영어 학습 앱 Newsbara API 명세서")
                 .version("1.0.0");
 
-        String jwtSchemeName = "JWT TOKEN";
+        String jwtSchemeName = "Authorization";
         SecurityRequirement securityRequirement = new SecurityRequirement().addList(jwtSchemeName);
         Components components = new Components()
                 .addSecuritySchemes(jwtSchemeName, new SecurityScheme()

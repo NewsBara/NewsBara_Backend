@@ -44,6 +44,10 @@ dependencies {
 	// Swagger
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.2'
 
+	// youtube
+	implementation "io.github.thoroldvix:youtube-transcript-api:0.3.6"
+
+
 }
 
 tasks.named('test') {

@@ -66,5 +66,13 @@ public class HistoryService {
         return HistoryResDto.fromEntity(savedHistory);
     }
 
+    @Transactional
+    public List<HistoryResDto> getHistory(Principal principal) {
+        User user = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
+        List<WatchHistory> histories = historyRepository.findByUser(user);
+
+        return histories.stream().map(HistoryResDto::fromEntity).collect(Collectors.toList());
+    }
 }

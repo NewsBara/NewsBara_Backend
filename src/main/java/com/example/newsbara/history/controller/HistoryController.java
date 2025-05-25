@@ -32,5 +32,11 @@ public class HistoryController {
         return ResponseEntity.ok(ApiResponse.onSuccess(historyService.postHistory(principal, request)));
     }
 
+    @GetMapping("")
+    @Operation(summary = "학습 진행 사항 조회 API",
+            description = "학습 진도 상황에 대한 정보와 시청한 동영상에 대한 정보를 조회합니다.")
+    public ResponseEntity<ApiResponse<List<HistoryResDto>>> getHistory(Principal principal) {
 
+        return ResponseEntity.ok(ApiResponse.onSuccess(historyService.getHistory(principal)));
+    }
 }

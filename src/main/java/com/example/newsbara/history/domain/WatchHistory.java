@@ -4,10 +4,9 @@ import com.example.newsbara.global.common.BaseEntity;
 import com.example.newsbara.history.domain.enums.Status;
 import com.example.newsbara.user.domain.User;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
+import java.time.LocalDateTime;
 
 
 @Entity
@@ -16,6 +15,7 @@ import lombok.NoArgsConstructor;
         @Index(name = "idx_title", columnList = "title")
 })
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -41,7 +41,8 @@ public class WatchHistory extends BaseEntity {
     @Column(nullable = false)
     private String channel;
 
-    private Integer length;
+    // parse 된 형태로 저장 (00:00:00)
+    private String length;
 
     // 카테고리 데이터 형식 추후 결정
     private String category;
@@ -50,4 +51,10 @@ public class WatchHistory extends BaseEntity {
     @Column(nullable = false)
     private Status status;
 
+
+    // WatchHistory 엔티티에 추가
+    public void updateStatus(Status status) {
+        this.status = status;
+        // BaseEntity를 상속-> @LastModifiedDate로 updatedAt이 자동 업데이트됨
+    }
 }

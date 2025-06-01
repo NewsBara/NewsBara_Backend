@@ -6,15 +6,14 @@ import com.example.newsbara.history.domain.WatchHistory;
 import com.example.newsbara.history.dto.req.HistoryReqDto;
 import com.example.newsbara.history.dto.res.HistoryResDto;
 import com.example.newsbara.history.repository.HistoryRepository;
-import com.example.newsbara.history.util.YoutubeDurationParser;
 import com.example.newsbara.user.domain.User;
 import com.example.newsbara.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.security.Principal;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 
@@ -24,13 +23,13 @@ public class HistoryService {
 
     private final UserRepository userRepository;
     private final HistoryRepository historyRepository;
-    private final YoutubeApiService youtubeApiService;
+//    private final YoutubeApiService youtubeApiService;
 
 
-    public HistoryService(UserRepository userRepository, HistoryRepository historyRepository, YoutubeApiService youtubeApiService) {
+    public HistoryService(UserRepository userRepository, HistoryRepository historyRepository) {
         this.userRepository = userRepository;
         this.historyRepository = historyRepository;
-        this.youtubeApiService = youtubeApiService;
+//        this.youtubeApiService = youtubeApiService;
     }
 
     @Transactional
@@ -39,30 +38,30 @@ public class HistoryService {
         User user = userRepository.findByEmail(principal.getName())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
+        // 기존 시청 기록이 있는지 확인
+        Optional<WatchHistory> existingHistory = historyRepository
+                .findByUserAndVideoId(user, request.getVideoId());
 
-        // 2. YouTube API를 통해 비디오 정보 가져오기
-        YoutubeVideoInfo videoInfo = youtubeApiService.getVideoInfo(request.getVideoId());
+        WatchHistory watchHistory;
 
-        int durationInSeconds = YoutubeDurationParser.parseToSeconds(videoInfo.getLength());
-        String categoryName = youtubeApiService.getCategoryName(videoInfo.getCategory());
+        if (existingHistory.isPresent()) {
+            // 기존 기록이 있으면 상태만 업데이트
+            watchHistory = existingHistory.get();
+            watchHistory.updateStatus(request.getStatus());
+        } else {
+            // 새로운 기록 생성
+            watchHistory = request.toEntity();
+            watchHistory.setUser(user);
 
-        // 3. WatchHistory 엔티티 생성
-        WatchHistory watchHistory = WatchHistory.builder()
-                .user(user)
-                .videoId(request.getVideoId())
-                .title(videoInfo.getTitle())
-                .thumbnail(videoInfo.getThumbnail())
-                .channel(videoInfo.getChannel())
-                .length(durationInSeconds) // 변환된 문자열 사용
-                .category(categoryName)   // 실제 카테고리명
-                .status(request.getStatus())
-                .build();
+            // 프론트에서 Youtube API에서 받은 형식 그대로 전송할 경우 (PT15M33S)
+//          String duration = YoutubeDurationParser.parse(request.getLength());
+//          watchHistory.setLength(duration);
+        }
 
-
-        // 4. 저장
+        // 저장
         WatchHistory savedHistory = historyRepository.save(watchHistory);
 
-        // 5. 응답 생성
+        // 응답 생성
         return HistoryResDto.fromEntity(savedHistory);
     }
 
@@ -71,7 +70,7 @@ public class HistoryService {
         User user = userRepository.findByEmail(principal.getName())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
-        List<WatchHistory> histories = historyRepository.findByUser(user);
+        List<WatchHistory> histories = historyRepository.findByUserOrderByCreatedAtDesc(user);
 
         return histories.stream().map(HistoryResDto::fromEntity).collect(Collectors.toList());
     }

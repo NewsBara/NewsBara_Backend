@@ -59,7 +59,7 @@ public class YoutubeApiService {
                             .path("/videoCategories")
                             .queryParam("part", "snippet")
                             .queryParam("id", categoryId)
-                            .queryParam("regionCode", "KR")
+                            .queryParam("regionCode", "EN")
                             .queryParam("key", youtubeApiKey)
                             .build())
                     .retrieve()

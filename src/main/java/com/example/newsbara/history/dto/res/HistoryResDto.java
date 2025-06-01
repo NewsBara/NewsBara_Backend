@@ -21,7 +21,7 @@ public class HistoryResDto {
     private String title;
     private String thumbnail;
     private String channel;
-    private Integer length;
+    private String length;
     private String category;
     private Status status;
     private LocalDateTime createdAt;

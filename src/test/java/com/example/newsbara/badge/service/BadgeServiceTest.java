@@ -40,9 +40,9 @@ class BadgeServiceTest {
     private Principal principal;
 
     private User testUser;
-    private Badge bronzeBadge;
-    private Badge silverBadge;
-    private Badge goldBadge;
+    private Badge level1Badge;
+    private Badge level2Badge;
+    private Badge level3Badge;
 
     @BeforeEach
     void setUp() {
@@ -55,23 +55,23 @@ class BadgeServiceTest {
                 .build();
 
         // 테스트용 뱃지들 생성
-        bronzeBadge = Badge.builder()
+        level1Badge = Badge.builder()
                 .id(1)
-                .name("bronze")
+                .name("level1")
                 .minPoint(100)
                 .maxPoint(499)
                 .build();
 
-        silverBadge = Badge.builder()
+        level2Badge = Badge.builder()
                 .id(2)
-                .name("silver")
+                .name("level2")
                 .minPoint(500)
                 .maxPoint(999)
                 .build();
 
-        goldBadge = Badge.builder()
+        level3Badge = Badge.builder()
                 .id(3)
-                .name("gold")
+                .name("level3")
                 .minPoint(1000)
                 .maxPoint(1999)
                 .build();
@@ -83,17 +83,17 @@ class BadgeServiceTest {
         // given
         when(principal.getName()).thenReturn("test@example.com");
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
-        when(badgeRepository.findCurrentBadgesByPoints(350)).thenReturn(List.of(bronzeBadge));
-        when(badgeRepository.findNextBadgesByPoints(350)).thenReturn(List.of(silverBadge, goldBadge));
+        when(badgeRepository.findCurrentBadgesByPoints(350)).thenReturn(List.of(level1Badge));
+        when(badgeRepository.findNextBadgesByPoints(350)).thenReturn(List.of(level2Badge, level3Badge));
 
         // when
         BadgeResDto result = badgeService.getBadgeInfo(principal);
 
         // then
-        assertThat(result.getCurrentBadgeName()).isEqualTo("bronze");
+        assertThat(result.getCurrentBadgeName()).isEqualTo("level1");
         assertThat(result.getCurrentPoints()).isEqualTo(350);
         assertThat(result.getNextBadgeMinPoint()).isEqualTo(500);
-        assertThat(result.getNextBadgeName()).isEqualTo("silver");
+        assertThat(result.getNextBadgeName()).isEqualTo("level2");
     }
 
     @Test
@@ -104,7 +104,7 @@ class BadgeServiceTest {
         when(principal.getName()).thenReturn("test@example.com");
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
         when(badgeRepository.findCurrentBadgesByPoints(50)).thenReturn(Collections.emptyList());
-        when(badgeRepository.findNextBadgesByPoints(50)).thenReturn(List.of(bronzeBadge, silverBadge));
+        when(badgeRepository.findNextBadgesByPoints(50)).thenReturn(List.of(level1Badge, level2Badge));
 
         // when
         BadgeResDto result = badgeService.getBadgeInfo(principal);
@@ -113,7 +113,7 @@ class BadgeServiceTest {
         assertThat(result.getCurrentBadgeName()).isNull();
         assertThat(result.getCurrentPoints()).isEqualTo(50);
         assertThat(result.getNextBadgeMinPoint()).isEqualTo(100);
-        assertThat(result.getNextBadgeName()).isEqualTo("bronze");
+        assertThat(result.getNextBadgeName()).isEqualTo("level1");
     }
 
     @Test
@@ -123,14 +123,14 @@ class BadgeServiceTest {
         testUser.setPoint(2000); // 최고 등급
         when(principal.getName()).thenReturn("test@example.com");
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
-        when(badgeRepository.findCurrentBadgesByPoints(2000)).thenReturn(List.of(goldBadge));
+        when(badgeRepository.findCurrentBadgesByPoints(2000)).thenReturn(List.of(level3Badge));
         when(badgeRepository.findNextBadgesByPoints(2000)).thenReturn(Collections.emptyList());
 
         // when
         BadgeResDto result = badgeService.getBadgeInfo(principal);
 
         // then
-        assertThat(result.getCurrentBadgeName()).isEqualTo("gold");
+        assertThat(result.getCurrentBadgeName()).isEqualTo("level3");
         assertThat(result.getCurrentPoints()).isEqualTo(2000);
         assertThat(result.getNextBadgeMinPoint()).isNull();
         assertThat(result.getNextBadgeName()).isNull();
@@ -153,13 +153,13 @@ class BadgeServiceTest {
     void updateUserBadge_Success() {
         // given
         testUser.setBadge(null); // 현재 뱃지 없음
-        when(badgeRepository.findCurrentBadgesByPoints(350)).thenReturn(List.of(bronzeBadge));
+        when(badgeRepository.findCurrentBadgesByPoints(350)).thenReturn(List.of(level1Badge));
 
         // when
         badgeService.updateUserBadge(testUser);
 
         // then
-        assertThat(testUser.getBadge()).isEqualTo(bronzeBadge);
+        assertThat(testUser.getBadge()).isEqualTo(level1Badge);
         verify(userRepository).save(testUser);
     }
 
@@ -167,8 +167,8 @@ class BadgeServiceTest {
     @DisplayName("뱃지 업데이트 - 이미 같은 뱃지일 경우")
     void updateUserBadge_SameBadge() {
         // given
-        testUser.setBadge(bronzeBadge); // 이미 브론즈 뱃지 보유
-        when(badgeRepository.findCurrentBadgesByPoints(350)).thenReturn(List.of(bronzeBadge));
+        testUser.setBadge(level1Badge); // 이미 브론즈 뱃지 보유
+        when(badgeRepository.findCurrentBadgesByPoints(350)).thenReturn(List.of(level1Badge));
 
         // when
         badgeService.updateUserBadge(testUser);

@@ -48,7 +48,7 @@ public class WatchHistory extends BaseEntity {
     private String category;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "status", length = 20)
     private Status status;
 
 

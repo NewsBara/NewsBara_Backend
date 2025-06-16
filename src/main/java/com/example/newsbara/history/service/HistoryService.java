@@ -3,6 +3,7 @@ package com.example.newsbara.history.service;
 import com.example.newsbara.global.common.apiPayload.code.status.ErrorStatus;
 import com.example.newsbara.global.common.apiPayload.exception.GeneralException;
 import com.example.newsbara.history.domain.WatchHistory;
+import com.example.newsbara.history.domain.enums.Status;
 import com.example.newsbara.history.dto.req.HistoryReqDto;
 import com.example.newsbara.history.dto.res.HistoryResDto;
 import com.example.newsbara.history.repository.HistoryRepository;
@@ -47,7 +48,18 @@ public class HistoryService {
         if (existingHistory.isPresent()) {
             // 기존 기록이 있으면 상태만 업데이트
             watchHistory = existingHistory.get();
-            watchHistory.updateStatus(request.getStatus());
+
+            // 현재 상태와 새로운 상태를 비교하여 순서 검증
+            Status currentStatus = watchHistory.getStatus();
+            Status newStatus = request.getStatus();
+
+            // 같은 상태이거나 아래 단계로의 변경 요청은 무시
+            if (currentStatus == newStatus || !isValidStatusTransition(currentStatus, newStatus)) {
+                // 변경하지 않고 기존 객체 그대로 사용
+            } else {
+                // 유효한 상태 변경만 수행
+                watchHistory.updateStatus(newStatus);
+            }
         } else {
             // 새로운 기록 생성
             watchHistory = request.toEntity();
@@ -73,5 +85,11 @@ public class HistoryService {
         List<WatchHistory> histories = historyRepository.findByUserOrderByCreatedAtDesc(user);
 
         return histories.stream().map(HistoryResDto::fromEntity).collect(Collectors.toList());
+    }
+
+    // 상태 변경 순서 검증 메서드
+    private boolean isValidStatusTransition(Status currentStatus, Status newStatus) {
+        // 새로운 상태가 현재 상태보다 순서상 뒤에 있어야 함
+        return newStatus.getOrder() > currentStatus.getOrder();
     }
 }

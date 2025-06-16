@@ -314,4 +314,35 @@ public class HistoryServiceTest {
                 .status(Status.WATCHED)
                 .build();
     }
+
+    @Test
+    @DisplayName("역순 상태 변경 테스트 - TEST에서 SHADOWING로") // 변경되지 않아야 함
+    void postHistory_역순상태변경_테스트() {
+        // given
+        WatchHistory existingHistory = createWatchHistory(testUser);
+        existingHistory.updateStatus(Status.TEST);
+
+        HistoryReqDto watchedRequest = new HistoryReqDto(
+                TEST_VIDEO_ID,
+                TEST_TITLE,
+                TEST_THUMBNAIL,
+                TEST_CHANNEL,
+                TEST_LENGTH,
+                TEST_CATEGORY,
+                Status.SHADOWING);
+
+        when(userRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.of(testUser));
+        when(historyRepository.findByUserAndVideoId(testUser, TEST_VIDEO_ID))
+                .thenReturn(Optional.of(existingHistory));
+        when(historyRepository.save(existingHistory)).thenReturn(existingHistory);
+
+        // when
+        HistoryResDto result = historyService.postHistory(testPrincipal, watchedRequest);
+
+        // then
+        assertEquals(Status.TEST, result.getStatus());
+        assertEquals(Status.TEST, existingHistory.getStatus());
+
+        verify(historyRepository, times(1)).save(existingHistory);
+    }
 }

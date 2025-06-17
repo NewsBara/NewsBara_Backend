@@ -3,10 +3,8 @@ package com.example.newsbara.user.controller;
 import com.example.newsbara.global.common.apiPayload.ApiResponse;
 import com.example.newsbara.user.dto.res.UserInfoResDto;
 import com.example.newsbara.user.service.MypageService;
-import com.example.newsbara.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.ai.chat.client.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,7 +28,7 @@ public class MypageController {
     @GetMapping("")
     @Operation(summary = "마이페이지 메인 조회 API",
     description = "마이페이지 메인 화면에 있는 회원 정보를 조회하는 API입니다.")
-    public ResponseEntity<ApiResponse<UserInfoResDto>> getMypage(Principal principal) {
+    public ApiResponse<UserInfoResDto> getMypage(Principal principal) {
 
         return ApiResponse.onSuccess(mypageService.getMypage(principal));
     }

@@ -1,11 +1,15 @@
 package com.example.newsbara.user.service;
 
+import com.example.newsbara.badge.repository.BadgeRepository;
+import com.example.newsbara.badge.service.BadgeService;
 import com.example.newsbara.global.common.apiPayload.code.status.ErrorStatus;
 import com.example.newsbara.global.common.apiPayload.exception.GeneralException;
 import com.example.newsbara.global.common.security.TokenProvider;
 import com.example.newsbara.user.domain.User;
+import com.example.newsbara.user.dto.req.PointReqDto;
 import com.example.newsbara.user.dto.req.UserLoginReqDto;
 import com.example.newsbara.user.dto.req.UserSignupReqDto;
+import com.example.newsbara.user.dto.res.PointResDto;
 import com.example.newsbara.user.dto.res.TokenDto;
 import com.example.newsbara.user.dto.res.UserInfoResDto;
 import com.example.newsbara.user.repository.UserRepository;
@@ -21,13 +25,15 @@ import java.time.Duration;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final BadgeService badgeService;
     private final PasswordEncoder passwordEncoder;
     private final TokenProvider tokenProvider;
     private final RedisTemplate<String, String> redisTemplate;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
+    public UserService(UserRepository userRepository, BadgeService badgeService, PasswordEncoder passwordEncoder,
                        TokenProvider tokenProvider, RedisTemplate<String, String> redisTemplate) {
         this.userRepository = userRepository;
+        this.badgeService = badgeService;
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
         this.redisTemplate = redisTemplate;
@@ -89,5 +95,25 @@ public class UserService {
         redisTemplate.delete(token);
 
         userRepository.delete(user);
+    }
+
+
+    @Transactional
+    public PointResDto addPoint(Principal principal, PointReqDto request) {
+        User user = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+
+        if (request.getIsCorrect()) {
+            // 맞으면 +20
+            user.setPoint(user.getPoint()+20);
+        } else {
+            // 틀리면 +10
+            user.setPoint(user.getPoint()+10);
+        }
+
+        badgeService.updateUserBadge(user);
+        User savedUser = userRepository.save(user);
+
+        return PointResDto.fromEntity(savedUser);
     }
 }

@@ -1,6 +1,7 @@
 package com.example.newsbara.user.controller;
 
 import com.example.newsbara.global.common.apiPayload.ApiResponse;
+import com.example.newsbara.user.dto.res.MypageResDto;
 import com.example.newsbara.user.dto.res.UserInfoResDto;
 import com.example.newsbara.user.service.MypageService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,7 +29,7 @@ public class MypageController {
     @GetMapping("")
     @Operation(summary = "마이페이지 메인 조회 API",
     description = "마이페이지 메인 화면에 있는 회원 정보를 조회하는 API입니다.")
-    public ApiResponse<UserInfoResDto> getMypage(Principal principal) {
+    public ApiResponse<MypageResDto> getMypage(Principal principal) {
 
         return ApiResponse.onSuccess(mypageService.getMypage(principal));
     }

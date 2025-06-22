@@ -26,8 +26,12 @@ public enum ErrorStatus implements BaseErrorCode {
 
     // 파일 관련 에러 추가
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_001", "파일 업로드에 실패하였습니다."),
-    FILE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_002", "파일 삭제에 실패하였습니다.");
+    FILE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_002", "파일 삭제에 실패하였습니다."),
 
+    // 테스트 관련 에러 추가
+    TRANSCRIPT_NOT_AVAILABLE(HttpStatus.NOT_FOUND, "TEST4001", "이 동영상은 영어 자막이 없습니다."),
+    TRANSCRIPT_EXTRACTION_FAILED(HttpStatus.NOT_FOUND, "TEST4002", "자막 추출에 실패하였습니다."),
+    TEST_GENERATION_FAILED(HttpStatus.NOT_FOUND, "TEST4003", "테스트 생성에 실패하였습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

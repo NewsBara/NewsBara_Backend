@@ -50,5 +50,7 @@ spring:
       on-profile: common
   application:
     name: newsbara
-
+app:
+  temp:
+    dir: ${java.io.tmpdir}/youtube-transcripts  # 시스템 임시 디렉토리 사용
 

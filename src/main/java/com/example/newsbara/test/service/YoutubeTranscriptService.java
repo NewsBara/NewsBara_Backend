@@ -1,36 +1,270 @@
 package com.example.newsbara.test.service;
 
-import io.github.thoroldvix.internal.TranscriptApiFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import io.github.thoroldvix.api.*;
 
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 @Service
 public class YoutubeTranscriptService {
 
-    private final YoutubeTranscriptApi transcriptApi;
+    private static final Logger logger = LoggerFactory.getLogger(YoutubeTranscriptService.class);
+    private final ObjectMapper objectMapper;
+    private final String tempDir;
 
+    // 영어 자막 언어 코드 우선순위 (일반 영어 -> 기타 영어 변형)
+    private static final List<String> ENGLISH_LANGUAGE_CODES = Arrays.asList(
+            "en",           // 영어 (일반)
+            "en-GB",        // 영어 (영국)
+            "en-US",        // 영어 (미국)
+            "en-AU",        // 영어 (호주)
+            "en-CA"        // 영어 (캐나다)
+    );
+
+    // 기본 생성자 (테스트용)
     public YoutubeTranscriptService() {
-        this.transcriptApi = TranscriptApiFactory.createDefault();
+        this.objectMapper = new ObjectMapper();
+        this.tempDir = System.getProperty("java.io.tmpdir");
+    }
+
+    // Spring에서 사용하는 생성자
+    public YoutubeTranscriptService(@Value("${app.temp.dir:#{systemProperties['java.io.tmpdir']}}") String tempDir) {
+        this.objectMapper = new ObjectMapper();
+        this.tempDir = tempDir;
+    }
+
+    // VTT 자막에서 텍스트만 추출하는 정규식
+    private static final Pattern VTT_TEXT_PATTERN = Pattern.compile("^(?!WEBVTT|NOTE|\\d{2}:|-->)[^\\n]*$", Pattern.MULTILINE);
+    private static final Pattern TIME_PATTERN = Pattern.compile("\\d{2}:\\d{2}:\\d{2}\\.\\d{3} --> \\d{2}:\\d{2}:\\d{2}\\.\\d{3}");
+
+    /**
+     * 유튜브 동영상의 영어 자막을 하나의 완전한 스크립트 문자열로 반환합니다.
+     * 우선순위: en -> en-US -> en-GB -> 기타 영어 변형
+     */
+    public String getFullTranscript(String videoId) {
+        String tempFilePath = null;
+        Path tempDirPath = null;
+
+        try {
+            // 임시 디렉토리 생성
+            tempDirPath = Paths.get(tempDir, "youtube-transcripts");
+            Files.createDirectories(tempDirPath);
+
+            // 영어 자막 다운로드 시도 (우선순위 순서대로)
+            String actualLanguageCode = null;
+            for (String langCode : ENGLISH_LANGUAGE_CODES) {
+                try {
+                    logger.info("Trying to download subtitles with language code: {}", langCode);
+                    tempFilePath = downloadSubtitles(videoId, langCode, tempDirPath.toString());
+                    actualLanguageCode = langCode;
+                    logger.info("Successfully downloaded subtitles with language code: {}", langCode);
+                    break;
+                } catch (Exception e) {
+                    logger.debug("Failed to download subtitles with language code: {}", langCode);
+                    // 다음 언어 코드로 시도
+                }
+            }
+
+            if (tempFilePath == null || actualLanguageCode == null) {
+                throw new RuntimeException("No English subtitles available for video: " + videoId);
+            }
+
+            // 자막 파일 읽기 및 파싱
+            String transcript = parseSubtitleFile(tempFilePath);
+            logger.info("Successfully extracted transcript using language code: {}", actualLanguageCode);
+            return transcript;
+
+        } catch (Exception e) {
+            logger.error("Error extracting English transcript for video: {}", videoId, e);
+            throw new RuntimeException("No English transcript available for video: " + videoId, e);
+        } finally {
+            // 임시 파일 정리
+            cleanupTempFiles(tempDirPath, videoId);
+        }
     }
 
     /**
-     * 유튜브 동영상의 자막을 하나의 완전한 스크립트 문자열로 반환합니다.
+     * 기존 메서드와의 호환성을 위한 오버로드된 메서드
      */
     public String getFullTranscript(String videoId, String languageCode) {
-        try {
-            TranscriptContent content = transcriptApi.getTranscript(videoId, languageCode);
-            var segments = content.getContent(); // 여기에 마우스를 올려 반환 타입 확인
-
-            return content.getContent().stream()
-                    .map(TranscriptContent.Fragment::getText)
-                    .collect(Collectors.joining(" "));
-
-        } catch (TranscriptRetrievalException e) {
-            throw new RuntimeException("No transcript available", e);
+        // 영어 관련 언어 코드가 아닌 경우 예외 처리
+        if (!isEnglishLanguageCode(languageCode)) {
+            throw new RuntimeException("Only English subtitles are supported. Requested language: " + languageCode);
         }
+
+        // 영어 언어 코드인 경우 우선순위 기반 다운로드 실행
+        return getFullTranscript(videoId);
+    }
+
+    private boolean isEnglishLanguageCode(String languageCode) {
+        return ENGLISH_LANGUAGE_CODES.contains(languageCode) ||
+                languageCode.toLowerCase().startsWith("en");
+    }
+
+    private String downloadSubtitles(String videoId, String languageCode, String outputDir) throws Exception {
+        List<String> command = new ArrayList<>();
+        command.add("yt-dlp");
+        command.add("--write-subs");
+        command.add("--write-auto-subs");
+        command.add("--sub-langs");
+        command.add(languageCode);
+        command.add("--skip-download");
+        command.add("--sub-format");
+        command.add("vtt");
+        command.add("-o");
+        command.add(outputDir + "/%(id)s.%(ext)s");
+        command.add("https://www.youtube.com/watch?v=" + videoId);
+
+        ProcessBuilder processBuilder = new ProcessBuilder(command);
+        processBuilder.directory(new File(outputDir));
+        Process process = processBuilder.start();
+
+        // 에러 출력 캡처
+        StringBuilder errorOutput = new StringBuilder();
+        try (BufferedReader errorReader = new BufferedReader(
+                new InputStreamReader(process.getErrorStream()))) {
+            String line;
+            while ((line = errorReader.readLine()) != null) {
+                errorOutput.append(line).append("\n");
+            }
+        }
+
+        boolean finished = process.waitFor(60, TimeUnit.SECONDS);
+        if (!finished) {
+            process.destroyForcibly();
+            throw new RuntimeException("yt-dlp process timed out");
+        }
+
+        int exitCode = process.exitValue();
+        if (exitCode != 0) {
+            logger.debug("yt-dlp failed with exit code: {}, error: {}", exitCode, errorOutput);
+            throw new RuntimeException("Failed to download subtitles for language: " + languageCode);
+        }
+
+        // 생성된 자막 파일 찾기
+        String expectedFileName = videoId + "." + languageCode + ".vtt";
+        Path subtitleFile = Paths.get(outputDir, expectedFileName);
+
+        if (!Files.exists(subtitleFile)) {
+            // 자동 생성 자막 파일명 시도
+            expectedFileName = videoId + "." + languageCode + ".auto.vtt";
+            subtitleFile = Paths.get(outputDir, expectedFileName);
+        }
+
+        if (!Files.exists(subtitleFile)) {
+            throw new RuntimeException("Subtitle file not found after download for language: " + languageCode);
+        }
+
+        return subtitleFile.toString();
+    }
+
+    private void cleanupTempFiles(Path tempDirPath, String videoId) {
+        if (tempDirPath != null && Files.exists(tempDirPath)) {
+            try {
+                // 해당 비디오 ID로 시작하는 모든 임시 파일 삭제
+                Files.list(tempDirPath)
+                        .filter(path -> path.getFileName().toString().startsWith(videoId))
+                        .forEach(path -> {
+                            try {
+                                Files.deleteIfExists(path);
+                                logger.debug("Deleted temp file: {}", path);
+                            } catch (IOException e) {
+                                logger.warn("Failed to delete temp file: {}", path, e);
+                            }
+                        });
+            } catch (IOException e) {
+                logger.warn("Failed to cleanup temp files in directory: {}", tempDirPath, e);
+            }
+        }
+    }
+
+    private String parseSubtitleFile(String filePath) throws IOException {
+        String content = Files.readString(Paths.get(filePath));
+
+        // VTT 형식 파싱
+        if (filePath.endsWith(".vtt")) {
+            return parseVttContent(content);
+        }
+
+        // SRT 형식 파싱 (필요한 경우)
+        if (filePath.endsWith(".srt")) {
+            return parseSrtContent(content);
+        }
+
+        // 기본적으로 VTT로 처리
+        return parseVttContent(content);
+    }
+
+    private String parseVttContent(String content) {
+        StringBuilder transcript = new StringBuilder();
+        String[] lines = content.split("\n");
+
+        boolean isTextSection = false;
+        for (String line : lines) {
+            line = line.trim();
+
+            // 빈 줄이면 섹션 구분
+            if (line.isEmpty()) {
+                isTextSection = false;
+                continue;
+            }
+
+            // WEBVTT 헤더나 NOTE 스킵
+            if (line.startsWith("WEBVTT") || line.startsWith("NOTE")) {
+                continue;
+            }
+
+            // 시간 코드 라인 확인
+            if (TIME_PATTERN.matcher(line).find()) {
+                isTextSection = true;
+                continue;
+            }
+
+            // 텍스트 라인
+            if (isTextSection) {
+                // HTML 태그 제거
+                String cleanText = line.replaceAll("<[^>]*>", "");
+                if (!cleanText.isEmpty()) {
+                    transcript.append(cleanText).append(" ");
+                }
+            }
+        }
+
+        return transcript.toString().trim();
+    }
+
+    private String parseSrtContent(String content) {
+        StringBuilder transcript = new StringBuilder();
+        String[] lines = content.split("\n");
+
+        for (String line : lines) {
+            line = line.trim();
+
+            // 빈 줄이나 숫자만 있는 라인(자막 번호) 스킵
+            if (line.isEmpty() || line.matches("^\\d+$")) {
+                continue;
+            }
+
+            // 시간 코드 라인 스킵
+            if (line.contains("-->")) {
+                continue;
+            }
+
+            // 텍스트 라인 추가
+            transcript.append(line).append(" ");
+        }
+
+        return transcript.toString().trim();
     }
 }

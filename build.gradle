@@ -23,15 +23,52 @@ repositories {
 	mavenCentral()
 }
 
+ext {
+	set('springAiVersion', "1.0.0-M8")
+}
+
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
+	// jwt
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'org.springframework.boot:spring-boot-starter-cache'
+
+	// Swagger
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.2'
+
+	// youtube
+	implementation "io.github.thoroldvix:youtube-transcript-api:0.3.6"
+
+	// spring ai
+	implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+
+	// Youtube API
+	implementation 'com.google.api-client:google-api-client:1.33.0'
+	implementation 'com.google.oauth-client:google-oauth-client-jetty:1.23.0'
+	implementation 'com.google.apis:google-api-services-youtube:v3-rev20230816-2.0.0'
+	implementation 'com.google.http-client:google-http-client-jackson2:1.39.2'
 }
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+	}
+}
+
 
 tasks.named('test') {
 	useJUnitPlatform()

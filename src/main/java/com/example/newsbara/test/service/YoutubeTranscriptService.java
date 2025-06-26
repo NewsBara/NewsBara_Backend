@@ -27,6 +27,7 @@ public class YoutubeTranscriptService {
     // 영어 자막 언어 코드 우선순위 (일반 영어 -> 기타 영어 변형)
     private static final List<String> ENGLISH_LANGUAGE_CODES = Arrays.asList(
             "en",           // 영어 (일반)
+            "en-en",
             "en-GB",        // 영어 (영국)
             "en-US",        // 영어 (미국)
             "en-AU",        // 영어 (호주)
@@ -46,6 +47,11 @@ public class YoutubeTranscriptService {
             @Value("${youtube.cookies.file.path:}") String cookiesFilePath) {
         this.objectMapper = new ObjectMapper();
         this.tempDir = tempDir;
+
+        logger.info("⭐️ @Value 설정 주입 확인 - tempDir: {}", tempDir);
+        logger.info("⭐️ @Value 설정 주입 확인 - cookiesFilePath (raw): {}", cookiesFilePath);
+
+
         // 쿠키 파일 경로 정규화 및 절대 경로 처리
         this.cookiesFilePath = normalizeCookiesPath(cookiesFilePath);
 
@@ -55,6 +61,7 @@ public class YoutubeTranscriptService {
 
     private String normalizeCookiesPath(String cookiesFilePath) {
         if (cookiesFilePath == null || cookiesFilePath.trim().isEmpty()) {
+            logger.warn("⭐️ normalizeCookiesPath: 빈 값 또는 null 입력됨");
             return null;
         }
 
@@ -64,9 +71,11 @@ public class YoutubeTranscriptService {
         if (!normalizedPath.startsWith("/") && !normalizedPath.matches("^[a-zA-Z]:.*")) {
             String workingDir = System.getProperty("user.dir");
             normalizedPath = Paths.get(workingDir, normalizedPath).toString();
+            logger.info("⭐️ 상대 경로로 인식되어 절대 경로로 변환됨: {}", normalizedPath);
+        } else {
+            logger.info("⭐️ 절대 경로로 사용됨: {}", normalizedPath);
         }
 
-        logger.debug("Normalized cookies file path: {} -> {}", cookiesFilePath, normalizedPath);
         return normalizedPath;
     }
 
@@ -197,16 +206,19 @@ public class YoutubeTranscriptService {
         boolean usingCookies = false;
         if (cookiesFilePath != null) {
             Path cookiesPath = Paths.get(cookiesFilePath);
+            logger.info("⭐️ 쿠키 파일 경로 확인 중: {}", cookiesPath.toAbsolutePath());
+
             if (Files.exists(cookiesPath) && Files.isReadable(cookiesPath)) {
                 command.add("--cookies");
                 command.add(cookiesFilePath);
                 usingCookies = true;
-                logger.debug("✓ Using cookies file: {}", cookiesFilePath);
+                logger.info("⭐️ ✓ 쿠키 파일 사용됨: {}", cookiesFilePath);
             } else {
-                logger.warn("✗ Cookies file configured but not accessible: {} (exists: {}, readable: {})",
-                        cookiesFilePath, Files.exists(cookiesPath),
-                        Files.exists(cookiesPath) && Files.isReadable(cookiesPath));
+                logger.warn("⭐️ ✗ 쿠키 파일 설정됨 but 접근 불가: {} (exists: {}, readable: {})",
+                        cookiesFilePath, Files.exists(cookiesPath), Files.isReadable(cookiesPath));
             }
+        } else {
+            logger.warn("⭐️ 쿠키 파일 경로가 null. yt-dlp 인증 없이 실행됨");
         }
 
         if (!usingCookies) {

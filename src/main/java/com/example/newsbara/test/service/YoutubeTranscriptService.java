@@ -3,6 +3,7 @@ package com.example.newsbara.test.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -34,14 +35,9 @@ public class YoutubeTranscriptService {
             "en-CA"        // 영어 (캐나다)
     );
 
-    // 기본 생성자 (테스트용)
-    public YoutubeTranscriptService() {
-        this.objectMapper = new ObjectMapper();
-        this.tempDir = System.getProperty("java.io.tmpdir");
-        this.cookiesFilePath = null;
-    }
 
     // Spring에서 사용하는 생성자
+    @Autowired
     public YoutubeTranscriptService(
             @Value("${app.temp.dir:#{systemProperties['java.io.tmpdir']}}") String tempDir,
             @Value("${youtube.cookies.file.path:}") String cookiesFilePath) {

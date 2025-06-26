@@ -20,7 +20,6 @@ server:
   serverAddress: localhost
 serverName: local_server
 
-
 youtube:
   cookies:
     file:
@@ -37,7 +36,7 @@ server:
   serverAddress: 3.36.30.174
 serverName: blue_server
 
-# Docker 환경에서 쿠키 파일 경로 설정
+# Docker 환경에서 쿠키 파일 경로 설정 (절대 경로)
 youtube:
   cookies:
     file:
@@ -54,7 +53,7 @@ server:
   serverAddress: 3.36.30.174
 serverName: green_server
 
-# Docker 환경에서 쿠키 파일 경로 설정
+# Docker 환경에서 쿠키 파일 경로 설정 (절대 경로)
 youtube:
   cookies:
     file:
@@ -68,6 +67,15 @@ spring:
       on-profile: common
   application:
     name: newsbara
+
+# 임시 디렉토리 설정
 app:
   temp:
-    dir: ${java.io.tmpdir}/youtube-transcripts  # 시스템 임시 디렉토리 사용
+    dir: "/tmp/youtube-transcripts"  # Docker 환경에서 명시적 경로 설정
+
+# 로깅 설정 추가 (디버깅용)
+logging:
+  level:
+    com.example.newsbara.test.service.YoutubeTranscriptService: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p %pid --- [%15.15t] %-40.40logger{39} : %m%n"

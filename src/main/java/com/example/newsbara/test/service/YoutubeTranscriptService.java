@@ -46,28 +46,79 @@ public class YoutubeTranscriptService {
             @Value("${youtube.cookies.file.path:}") String cookiesFilePath) {
         this.objectMapper = new ObjectMapper();
         this.tempDir = tempDir;
-        this.cookiesFilePath = cookiesFilePath.isEmpty() ? null : cookiesFilePath;
+        // 쿠키 파일 경로 정규화 및 절대 경로 처리
+        this.cookiesFilePath = normalizeCookiesPath(cookiesFilePath);
 
         // 생성자에서 쿠키 파일 상태 확인 및 로깅
         logCookieFileStatus();
     }
 
+    private String normalizeCookiesPath(String cookiesFilePath) {
+        if (cookiesFilePath == null || cookiesFilePath.trim().isEmpty()) {
+            return null;
+        }
+
+        String normalizedPath = cookiesFilePath.trim();
+
+        // 절대 경로가 아닌 경우 현재 작업 디렉토리 기준으로 처리
+        if (!normalizedPath.startsWith("/") && !normalizedPath.matches("^[a-zA-Z]:.*")) {
+            String workingDir = System.getProperty("user.dir");
+            normalizedPath = Paths.get(workingDir, normalizedPath).toString();
+        }
+
+        logger.debug("Normalized cookies file path: {} -> {}", cookiesFilePath, normalizedPath);
+        return normalizedPath;
+    }
+
     private void logCookieFileStatus() {
+        logger.info("=== Cookie File Status Check ===");
+        logger.info("Raw cookies file path from config: {}",
+                System.getProperty("youtube.cookies.file.path", "NOT_SET"));
+        logger.info("Processed cookies file path: {}", cookiesFilePath);
+        logger.info("Current working directory: {}", System.getProperty("user.dir"));
+
         if (cookiesFilePath != null) {
             Path cookiesPath = Paths.get(cookiesFilePath);
+            logger.info("Checking path: {}", cookiesPath.toAbsolutePath());
+
             if (Files.exists(cookiesPath)) {
                 try {
                     long fileSize = Files.size(cookiesPath);
-                    logger.info("Cookies file found and loaded: {} (size: {} bytes)", cookiesFilePath, fileSize);
+                    boolean isReadable = Files.isReadable(cookiesPath);
+                    logger.info("✓ Cookies file found: {} (size: {} bytes, readable: {})",
+                            cookiesFilePath, fileSize, isReadable);
+
+                    // 파일 내용 첫 줄 확인 (디버깅용)
+                    try {
+                        String firstLine = Files.lines(cookiesPath).findFirst().orElse("");
+                        logger.info("First line of cookies file: {}", firstLine);
+                    } catch (Exception e) {
+                        logger.warn("Cannot read first line of cookies file", e);
+                    }
                 } catch (Exception e) {
-                    logger.warn("Cookies file exists but cannot read size: {}", cookiesFilePath, e);
+                    logger.warn("✗ Cookies file exists but cannot read properties: {}", cookiesFilePath, e);
                 }
             } else {
-                logger.warn("Cookies file path configured but file not found: {}", cookiesFilePath);
+                logger.warn("✗ Cookies file path configured but file not found: {}", cookiesFilePath);
+
+                // 부모 디렉토리 존재 여부 확인
+                Path parentDir = cookiesPath.getParent();
+                if (parentDir != null) {
+                    logger.info("Parent directory exists: {}", Files.exists(parentDir));
+                    if (Files.exists(parentDir)) {
+                        try {
+                            logger.info("Files in parent directory: {}",
+                                    Arrays.toString(Files.list(parentDir).map(Path::getFileName).toArray()));
+                        } catch (Exception e) {
+                            logger.warn("Cannot list parent directory", e);
+                        }
+                    }
+                }
             }
         } else {
             logger.info("No cookies file configured. YouTube may require authentication for some videos.");
         }
+        logger.info("=== End Cookie File Status Check ===");
     }
 
     // VTT 자막에서 텍스트만 추출하는 정규식
@@ -97,7 +148,7 @@ public class YoutubeTranscriptService {
                     logger.info("Successfully downloaded subtitles with language code: {}", langCode);
                     break;
                 } catch (Exception e) {
-                    logger.debug("Failed to download subtitles with language code: {}", langCode);
+                    logger.debug("Failed to download subtitles with language code: {} - {}", langCode, e.getMessage());
                     // 다음 언어 코드로 시도
                 }
             }
@@ -142,15 +193,23 @@ public class YoutubeTranscriptService {
         List<String> command = new ArrayList<>();
         command.add("yt-dlp");
 
-        // 쿠키 파일이 설정되어 있고 존재하면 추가
-        if (cookiesFilePath != null && Files.exists(Paths.get(cookiesFilePath))) {
-            command.add("--cookies");
-            command.add(cookiesFilePath);
-            logger.debug("Using cookies file: {}", cookiesFilePath);
-        } else {
-            if (cookiesFilePath != null) {
-                logger.warn("Cookies file configured but not found: {}", cookiesFilePath);
+        // 쿠키 파일 처리 개선
+        boolean usingCookies = false;
+        if (cookiesFilePath != null) {
+            Path cookiesPath = Paths.get(cookiesFilePath);
+            if (Files.exists(cookiesPath) && Files.isReadable(cookiesPath)) {
+                command.add("--cookies");
+                command.add(cookiesFilePath);
+                usingCookies = true;
+                logger.debug("✓ Using cookies file: {}", cookiesFilePath);
+            } else {
+                logger.warn("✗ Cookies file configured but not accessible: {} (exists: {}, readable: {})",
+                        cookiesFilePath, Files.exists(cookiesPath),
+                        Files.exists(cookiesPath) && Files.isReadable(cookiesPath));
             }
+        }
+
+        if (!usingCookies) {
             logger.warn("No valid cookies file available. This may cause authentication issues with YouTube.");
         }
 

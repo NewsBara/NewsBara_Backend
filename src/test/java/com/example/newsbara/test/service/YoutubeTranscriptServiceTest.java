@@ -5,11 +5,9 @@ import com.example.newsbara.global.common.apiPayload.exception.GeneralException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
-import org.junit.jupiter.api.condition.EnabledOnOs;
-import org.junit.jupiter.api.condition.OS;
 
-import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * 1. yt-dlp가 설치되어 있어야 함 (pip install yt-dlp)
  * 2. 네트워크 연결이 필요함
  * 3. YouTube에서 해당 비디오가 차단되지 않아야 함
+ * 4. 쿠키 파일이 있으면 더 안정적으로 동작함
  */
 public class YoutubeTranscriptServiceTest {
 
@@ -30,8 +29,20 @@ public class YoutubeTranscriptServiceTest {
 
     @BeforeEach
     public void setUp() {
-        // 기본 생성자 사용 (Service에서 @Value로 주입받는 방식)
-        youtubeTranscriptService = new YoutubeTranscriptService();
+        // 테스트용 쿠키 파일 경로 설정
+        String testCookiesPath = "src/cookies.txt";
+
+        // 쿠키 파일이 존재하는지 확인하고 로그 출력
+        if (Files.exists(Paths.get(testCookiesPath))) {
+            System.out.println("테스트에서 쿠키 파일을 사용합니다: " + testCookiesPath);
+            youtubeTranscriptService = new YoutubeTranscriptService(
+                    System.getProperty("java.io.tmpdir"),
+                    testCookiesPath
+            );
+        } else {
+            System.out.println("쿠키 파일이 없어서 쿠키 없이 테스트를 진행합니다.");
+            youtubeTranscriptService = new YoutubeTranscriptService();
+        }
     }
 
     /**
@@ -57,6 +68,25 @@ public class YoutubeTranscriptServiceTest {
     }
 
     @Test
+    @DisplayName("쿠키 파일 상태 확인")
+    public void testCookieFileStatus() {
+        String cookiesPath = "src/cookies.txt";
+        if (Files.exists(Paths.get(cookiesPath))) {
+            System.out.println("✅ 쿠키 파일이 존재합니다: " + cookiesPath);
+            try {
+                long fileSize = Files.size(Paths.get(cookiesPath));
+                System.out.println("쿠키 파일 크기: " + fileSize + " bytes");
+                assertTrue(fileSize > 0, "쿠키 파일이 비어있습니다");
+            } catch (Exception e) {
+                System.out.println("⚠️ 쿠키 파일 크기를 확인할 수 없습니다: " + e.getMessage());
+            }
+        } else {
+            System.out.println("❌ 쿠키 파일이 존재하지 않습니다: " + cookiesPath);
+            System.out.println("쿠키 없이 테스트를 진행하지만, 일부 동영상에서 인증 오류가 발생할 수 있습니다.");
+        }
+    }
+
+    @Test
     @DisplayName("실제 유튜브 영상에서 영어 자막 가져오기")
     public void testGetFullTranscript_RealEnglishVideo() {
         // yt-dlp가 설치되어 있지 않으면 테스트 스킵
@@ -69,17 +99,19 @@ public class YoutubeTranscriptServiceTest {
         String videoId = "Oa0ZHfcalCM"; // What do tech pioneers think about the AI revolution?
 
         try {
+            System.out.println("영어 자막 추출 시도 중... 비디오 ID: " + videoId);
             String transcript = youtubeTranscriptService.getFullTranscript(videoId);
 
             assertNotNull(transcript, "트랜스크립트가 null이면 안됩니다");
             assertTrue(transcript.length() > 100, "트랜스크립트가 너무 짧습니다");
 
+            System.out.println("✅ 영어 트랜스크립트 추출 성공!");
             System.out.println("영어 트랜스크립트 길이: " + transcript.length());
             System.out.println("영어 트랜스크립트 일부: " +
                     transcript.substring(0, Math.min(200, transcript.length())) + "...");
 
         } catch (GeneralException e) {
-            System.out.println("영어 자막 추출 실패: " + e.getMessage());
+            System.out.println("❌ 영어 자막 추출 실패 (GeneralException): " + e.getMessage());
             // 자막이 없거나 지역 제한 등의 이유로 실패할 수 있음
             assertTrue(
                     e.getCode() == ErrorStatus.TRANSCRIPT_NOT_AVAILABLE ||
@@ -87,9 +119,14 @@ public class YoutubeTranscriptServiceTest {
                     "예상된 오류 코드가 아닙니다: " + e.getCode()
             );
         } catch (RuntimeException e) {
-            System.out.println("일반적인 런타임 오류 발생: " + e.getMessage());
+            System.out.println("❌ 일반적인 런타임 오류 발생: " + e.getMessage());
+            // 쿠키 관련 인증 오류인지 확인
+            if (e.getMessage().contains("Sign in to confirm")) {
+                System.out.println("💡 해결방법: 쿠키 파일을 /app/config/cookies.txt에 추가하세요.");
+            }
             assertTrue(e.getMessage().contains("No transcript available") ||
-                            e.getMessage().contains("Failed to"),
+                            e.getMessage().contains("Failed to") ||
+                            e.getMessage().contains("Sign in to confirm"),
                     "예상된 오류 메시지가 아닙니다: " + e.getMessage());
         }
     }
@@ -106,6 +143,7 @@ public class YoutubeTranscriptServiceTest {
         String videoId = "dQw4w9WgXcQ"; // Rick Astley - Never Gonna Give You Up
 
         try {
+            System.out.println("짧은 영상 자막 추출 시도 중... 비디오 ID: " + videoId);
             String transcript = youtubeTranscriptService.getFullTranscript(videoId);
 
             assertNotNull(transcript, "트랜스크립트가 null이면 안됩니다");
@@ -121,18 +159,22 @@ public class YoutubeTranscriptServiceTest {
                     "예상된 가사가 포함되어야 합니다"
             );
 
+            System.out.println("✅ 짧은 영상 자막 추출 성공!");
             System.out.println("짧은 영상 트랜스크립트 길이: " + transcript.length());
             System.out.println("짧은 영상 트랜스크립트 일부: " +
                     transcript.substring(0, Math.min(100, transcript.length())) + "...");
 
         } catch (GeneralException e) {
-            System.out.println("짧은 영상 자막 추출 실패 (GeneralException): " + e.getMessage());
+            System.out.println("❌ 짧은 영상 자막 추출 실패 (GeneralException): " + e.getMessage());
             assertThat(e.getCode()).isIn(
                     ErrorStatus.TRANSCRIPT_NOT_AVAILABLE,
                     ErrorStatus.TRANSCRIPT_EXTRACTION_FAILED
             );
         } catch (RuntimeException e) {
-            System.out.println("짧은 영상 자막 추출 실패 (RuntimeException): " + e.getMessage());
+            System.out.println("❌ 짧은 영상 자막 추출 실패 (RuntimeException): " + e.getMessage());
+            if (e.getMessage().contains("Sign in to confirm")) {
+                System.out.println("💡 해결방법: 쿠키 파일을 /app/config/cookies.txt에 추가하세요.");
+            }
         }
     }
 
@@ -148,17 +190,19 @@ public class YoutubeTranscriptServiceTest {
         String videoId = "2C7EoBoPB7s"; // BBC 뉴스 영상
 
         try {
+            System.out.println("뉴스 영상 자막 추출 시도 중... 비디오 ID: " + videoId);
             String transcript = youtubeTranscriptService.getFullTranscript(videoId);
 
             assertNotNull(transcript, "뉴스 트랜스크립트가 null이면 안됩니다");
             assertTrue(transcript.length() > 100, "뉴스 트랜스크립트가 너무 짧습니다");
 
+            System.out.println("✅ 뉴스 영상 자막 추출 성공!");
             System.out.println("뉴스 영상 트랜스크립트 길이: " + transcript.length());
             System.out.println("뉴스 영상 트랜스크립트 일부: " +
                     transcript.substring(0, Math.min(200, transcript.length())) + "...");
 
         } catch (GeneralException e) {
-            System.out.println("뉴스 영상 자막 추출 실패 (GeneralException): " + e.getMessage());
+            System.out.println("❌ 뉴스 영상 자막 추출 실패 (GeneralException): " + e.getMessage());
             System.out.println("오류 코드: " + e.getCode());
 
             // 예상 가능한 오류 코드들
@@ -167,36 +211,36 @@ public class YoutubeTranscriptServiceTest {
                     ErrorStatus.TRANSCRIPT_EXTRACTION_FAILED
             );
         } catch (RuntimeException e) {
-            System.out.println("뉴스 영상 자막 추출 실패 (RuntimeException): " + e.getMessage());
+            System.out.println("❌ 뉴스 영상 자막 추출 실패 (RuntimeException): " + e.getMessage());
+            if (e.getMessage().contains("Sign in to confirm")) {
+                System.out.println("💡 해결방법: 쿠키 파일을 /app/config/cookies.txt에 추가하세요.");
+            }
             System.out.println("선택한 뉴스 영상에 자막이 없거나 지역 제한이 있을 수 있습니다.");
         }
     }
 
     @Test
-    @DisplayName("존재하지 않는 비디오 ID로 예외 발생 확인")
-    public void testGetFullTranscript_NonExistentVideo() {
+    @DisplayName("잘못된 비디오 ID로 테스트")
+    public void testGetFullTranscript_InvalidVideoId() {
         if (!isYtDlpAvailable()) {
             System.out.println("yt-dlp가 설치되어 있지 않아 테스트를 스킵합니다.");
             return;
         }
 
-        // 존재하지 않는 비디오 ID
-        String videoId = "ThisVideoDoesNotExist123456789";
+        String invalidVideoId = "INVALID_VIDEO_ID";
 
-        // 존재하지 않는 비디오에 대해 예외가 발생해야 함
-        Exception exception = assertThrows(RuntimeException.class, () -> {
-            youtubeTranscriptService.getFullTranscript(videoId);
-        });
+        try {
+            System.out.println("잘못된 비디오 ID로 테스트 중: " + invalidVideoId);
+            youtubeTranscriptService.getFullTranscript(invalidVideoId);
+            fail("잘못된 비디오 ID에 대해 예외가 발생해야 합니다");
 
-        assertNotNull(exception.getMessage(), "예외 메시지가 있어야 합니다");
-        assertTrue(
-                exception.getMessage().contains("No English transcript available") ||
-                        exception.getMessage().contains("Failed to") ||
-                        exception.getMessage().contains("No English transcript available"),
-                "적절한 오류 메시지가 포함되어야 합니다"
-        );
-
-        System.out.println("예상된 예외 발생: " + exception.getMessage());
+        } catch (RuntimeException e) {
+            System.out.println("✅ 예상된 오류 발생: " + e.getMessage());
+            assertTrue(e.getMessage().contains("No English") ||
+                            e.getMessage().contains("Failed to") ||
+                            e.getMessage().contains("not available"),
+                    "예상된 오류 메시지가 아닙니다: " + e.getMessage());
+        }
     }
 
     @Test

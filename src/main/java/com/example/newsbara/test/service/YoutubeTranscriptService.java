@@ -22,6 +22,7 @@ public class YoutubeTranscriptService {
     private static final Logger logger = LoggerFactory.getLogger(YoutubeTranscriptService.class);
     private final ObjectMapper objectMapper;
     private final String tempDir;
+    private final String cookiesFilePath;
 
     // 영어 자막 언어 코드 우선순위 (일반 영어 -> 기타 영어 변형)
     private static final List<String> ENGLISH_LANGUAGE_CODES = Arrays.asList(
@@ -36,12 +37,37 @@ public class YoutubeTranscriptService {
     public YoutubeTranscriptService() {
         this.objectMapper = new ObjectMapper();
         this.tempDir = System.getProperty("java.io.tmpdir");
+        this.cookiesFilePath = null;
     }
 
     // Spring에서 사용하는 생성자
-    public YoutubeTranscriptService(@Value("${app.temp.dir:#{systemProperties['java.io.tmpdir']}}") String tempDir) {
+    public YoutubeTranscriptService(
+            @Value("${app.temp.dir:#{systemProperties['java.io.tmpdir']}}") String tempDir,
+            @Value("${youtube.cookies.file.path:}") String cookiesFilePath) {
         this.objectMapper = new ObjectMapper();
         this.tempDir = tempDir;
+        this.cookiesFilePath = cookiesFilePath.isEmpty() ? null : cookiesFilePath;
+
+        // 생성자에서 쿠키 파일 상태 확인 및 로깅
+        logCookieFileStatus();
+    }
+
+    private void logCookieFileStatus() {
+        if (cookiesFilePath != null) {
+            Path cookiesPath = Paths.get(cookiesFilePath);
+            if (Files.exists(cookiesPath)) {
+                try {
+                    long fileSize = Files.size(cookiesPath);
+                    logger.info("Cookies file found and loaded: {} (size: {} bytes)", cookiesFilePath, fileSize);
+                } catch (Exception e) {
+                    logger.warn("Cookies file exists but cannot read size: {}", cookiesFilePath, e);
+                }
+            } else {
+                logger.warn("Cookies file path configured but file not found: {}", cookiesFilePath);
+            }
+        } else {
+            logger.info("No cookies file configured. YouTube may require authentication for some videos.");
+        }
     }
 
     // VTT 자막에서 텍스트만 추출하는 정규식
@@ -115,6 +141,19 @@ public class YoutubeTranscriptService {
     private String downloadSubtitles(String videoId, String languageCode, String outputDir) throws Exception {
         List<String> command = new ArrayList<>();
         command.add("yt-dlp");
+
+        // 쿠키 파일이 설정되어 있고 존재하면 추가
+        if (cookiesFilePath != null && Files.exists(Paths.get(cookiesFilePath))) {
+            command.add("--cookies");
+            command.add(cookiesFilePath);
+            logger.debug("Using cookies file: {}", cookiesFilePath);
+        } else {
+            if (cookiesFilePath != null) {
+                logger.warn("Cookies file configured but not found: {}", cookiesFilePath);
+            }
+            logger.warn("No valid cookies file available. This may cause authentication issues with YouTube.");
+        }
+
         command.add("--write-subs");
         command.add("--write-auto-subs");
         command.add("--sub-langs");
@@ -124,23 +163,50 @@ public class YoutubeTranscriptService {
         command.add("vtt");
         command.add("-o");
         command.add(outputDir + "/%(id)s.%(ext)s");
+
+        // User-Agent 추가로 봇 탐지 우회 시도
+        command.add("--user-agent");
+        command.add("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+
+        // 요청 간격 설정 (너무 빠른 요청 방지)
+        command.add("--sleep-interval");
+        command.add("1");
+        command.add("--max-sleep-interval");
+        command.add("3");
+
+        // 추가 옵션들 - 안정성 향상
+        command.add("--no-check-certificates");  // SSL 인증서 검사 비활성화
+        command.add("--prefer-insecure");        // HTTP 선호 (선택사항)
+
         command.add("https://www.youtube.com/watch?v=" + videoId);
 
         ProcessBuilder processBuilder = new ProcessBuilder(command);
         processBuilder.directory(new File(outputDir));
+
+        logger.debug("Executing command: {}", String.join(" ", command));
+
         Process process = processBuilder.start();
 
         // 에러 출력 캡처
         StringBuilder errorOutput = new StringBuilder();
+        StringBuilder standardOutput = new StringBuilder();
+
         try (BufferedReader errorReader = new BufferedReader(
-                new InputStreamReader(process.getErrorStream()))) {
+                new InputStreamReader(process.getErrorStream()));
+             BufferedReader outputReader = new BufferedReader(
+                     new InputStreamReader(process.getInputStream()))) {
+
             String line;
             while ((line = errorReader.readLine()) != null) {
                 errorOutput.append(line).append("\n");
             }
+
+            while ((line = outputReader.readLine()) != null) {
+                standardOutput.append(line).append("\n");
+            }
         }
 
-        boolean finished = process.waitFor(60, TimeUnit.SECONDS);
+        boolean finished = process.waitFor(90, TimeUnit.SECONDS); // 타임아웃 증가
         if (!finished) {
             process.destroyForcibly();
             throw new RuntimeException("yt-dlp process timed out");
@@ -148,8 +214,10 @@ public class YoutubeTranscriptService {
 
         int exitCode = process.exitValue();
         if (exitCode != 0) {
-            logger.debug("yt-dlp failed with exit code: {}, error: {}", exitCode, errorOutput);
-            throw new RuntimeException("Failed to download subtitles for language: " + languageCode);
+            logger.debug("yt-dlp failed with exit code: {}, error: {}, output: {}",
+                    exitCode, errorOutput, standardOutput);
+            throw new RuntimeException("Failed to download subtitles for language: " + languageCode +
+                    ". Error: " + errorOutput.toString());
         }
 
         // 생성된 자막 파일 찾기
@@ -166,6 +234,7 @@ public class YoutubeTranscriptService {
             throw new RuntimeException("Subtitle file not found after download for language: " + languageCode);
         }
 
+        logger.debug("Subtitle file created: {}", subtitleFile);
         return subtitleFile.toString();
     }
 

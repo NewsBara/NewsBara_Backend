@@ -44,3 +44,5 @@ logs/
 
 ### 프로젝트 설정 파일 ###
 /src/main/resources/application-secret.yml
+/src/cookies.txt
+

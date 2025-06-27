@@ -1,12 +1,15 @@
 package com.example.newsbara.user.controller;
 
 import com.example.newsbara.global.common.apiPayload.ApiResponse;
+import com.example.newsbara.user.dto.req.NameReqDto;
 import com.example.newsbara.user.dto.res.MypageResDto;
+import com.example.newsbara.user.dto.res.NameResDto;
 import com.example.newsbara.user.dto.res.UserInfoResDto;
 import com.example.newsbara.user.service.MypageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -32,5 +35,13 @@ public class MypageController {
     public ApiResponse<MypageResDto> getMypage(Principal principal) {
 
         return ApiResponse.onSuccess(mypageService.getMypage(principal));
+    }
+
+    @PutMapping("/name")
+    @Operation(summary = "이름 수정 API",
+            description = "마이페이지 메인 화면에 있는 회원 정보를 조회하는 API입니다.")
+    public ApiResponse<NameResDto> putName(Principal principal, NameReqDto request) {
+
+        return ApiResponse.onSuccess(mypageService.putName(principal, request));
     }
 }

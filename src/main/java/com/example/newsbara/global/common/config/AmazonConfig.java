@@ -29,8 +29,8 @@ public class AmazonConfig {
     @Value("${cloud.aws.s3.bucket}")
     private String bucket;
 
-    @Value("${cloud.aws.s3.path.report}")
-    private String reportPath;
+    @Value("${cloud.aws.s3.path.profile}")
+    private String profilePath;
 
 
 

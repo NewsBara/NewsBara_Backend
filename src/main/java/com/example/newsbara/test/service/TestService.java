@@ -8,6 +8,8 @@ import com.example.newsbara.score.repository.ScoreRepository;
 import com.example.newsbara.test.dto.res.TestResDto;
 import com.example.newsbara.user.domain.User;
 import com.example.newsbara.user.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.security.Principal;
@@ -15,6 +17,8 @@ import java.util.Map;
 
 @Service
 public class TestService {
+
+    private static final Logger logger = LoggerFactory.getLogger(TestService.class);
 
     private final YoutubeTranscriptService transcriptService;
     private final GptService gptService;
@@ -35,23 +39,45 @@ public class TestService {
         User user = userRepository.findByEmail(principal.getName())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
-
         // 최신 Score를 가져오되 없으면 null
         Score userScore = scoreRepository.findTopByUserOrderByCreatedAtDesc(user).orElse(null);
 
+        try {
+            logger.info("Attempting to generate test for video: {} by user: {}", videoId, user.getEmail());
 
-        // Get transcript
-        String transcript = transcriptService.getFullTranscript(videoId, "en");
+            // Get English transcript with priority system (en -> en-US -> en-GB -> etc.)
+            String transcript = transcriptService.getFullTranscript(videoId);
 
-        // Generate test using GPT
-        Map<String, String> testContent = gptService.generateTest(transcript, userScore);
+            logger.info("Successfully retrieved transcript for video: {}", videoId);
 
-        // Return the response without saving to database
-        return TestResDto.TestResponse.builder()
-                .videoId(videoId)
-                .summary(testContent.get("summary"))
-                .answer(testContent.get("answer"))
-                .explanation(testContent.get("explanation"))
-                .build();
+            // Generate test using GPT
+            Map<String, String> testContent = gptService.generateTest(transcript, userScore);
+
+            logger.info("Successfully generated test content for video: {}", videoId);
+
+            // Return the response without saving to database
+            return TestResDto.TestResponse.builder()
+                    .videoId(videoId)
+                    .summary(testContent.get("summary"))
+                    .answer(testContent.get("answer"))
+                    .explanation(testContent.get("explanation"))
+                    .build();
+
+        } catch (RuntimeException e) {
+            logger.error("Failed to generate test for video: {} by user: {}", videoId, user.getEmail(), e);
+
+            // 영어 자막이 없는 경우 더 구체적인 에러 메시지
+            if (e.getMessage().contains("No English")) {
+                throw new GeneralException(ErrorStatus.TRANSCRIPT_NOT_AVAILABLE);
+            }
+
+            // 기타 transcript 관련 오류
+            if (e.getMessage().contains("transcript") || e.getMessage().contains("subtitle")) {
+                throw new GeneralException(ErrorStatus.TRANSCRIPT_EXTRACTION_FAILED);
+            }
+
+            // 일반적인 오류
+            throw new GeneralException(ErrorStatus.TEST_GENERATION_FAILED);
+        }
     }
 }

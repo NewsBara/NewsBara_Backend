@@ -1,13 +1,13 @@
 spring:
   profiles:
-    active: blue  # Docker environment variable
+    active: ${PROFILES:local}  # Docker environment variable
     group:
       local: local, common, secret
       blue: blue, common, secret
       green: green, common, secret
 
 server:
-  env: blue  # Docker environment variable
+  env: ${ENV:local}  # Docker environment variable
 
 ---
 
@@ -20,6 +20,11 @@ server:
   serverAddress: localhost
 serverName: local_server
 
+youtube:
+  cookies:
+    file:
+      path: "cookies.txt"
+
 ---
 
 spring:
@@ -30,6 +35,12 @@ server:
   port: 8080
   serverAddress: 3.36.30.174
 serverName: blue_server
+
+# Docker 환경에서 쿠키 파일 경로 설정 (절대 경로)
+youtube:
+  cookies:
+    file:
+      path: "/app/config/cookies.txt"
 
 ---
 
@@ -42,6 +53,12 @@ server:
   serverAddress: 3.36.30.174
 serverName: green_server
 
+# Docker 환경에서 쿠키 파일 경로 설정 (절대 경로)
+youtube:
+  cookies:
+    file:
+      path: "/app/config/cookies.txt"
+
 ---
 
 spring:
@@ -51,4 +68,14 @@ spring:
   application:
     name: newsbara
 
+# 임시 디렉토리 설정
+app:
+  temp:
+    dir: "/tmp/youtube-transcripts"  # Docker 환경에서 명시적 경로 설정
 
+# 로깅 설정 추가 (디버깅용)
+logging:
+  level:
+    com.example.newsbara.test.service.YoutubeTranscriptService: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p %pid --- [%15.15t] %-40.40logger{39} : %m%n"

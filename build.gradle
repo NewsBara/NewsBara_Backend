@@ -64,6 +64,9 @@ dependencies {
 
 	// JSON 파싱을 위한 Jackson
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+	// Aws s3
+	implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
 }
 
 dependencyManagement {

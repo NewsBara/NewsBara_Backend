@@ -6,12 +6,15 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import javax.validation.constraints.NotNull;
+
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class ProfileResDto {
     private Integer id;
+    @NotNull
     private String profile_url;
 
     public static ProfileResDto fromEntity(User user) {

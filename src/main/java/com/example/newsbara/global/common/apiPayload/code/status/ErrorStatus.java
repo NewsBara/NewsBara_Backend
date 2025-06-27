@@ -23,7 +23,7 @@ public enum ErrorStatus implements BaseErrorCode {
     INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "USER4003", "비밀번호가 틀립니다."),
     USER_NOT_AUTHENTICATED(HttpStatus.UNAUTHORIZED, "USER4004", "인증된 사용자가 존재하지 않습니다."),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "USER4005","유효하지 않은 토큰입니다."),
-
+    NAME_IS_NULL(HttpStatus.BAD_REQUEST, "USER4006", "이름은 비어있어선 안됩니다."),
     // 파일 관련 에러 추가
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_001", "파일 업로드에 실패하였습니다."),
     FILE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE_002", "파일 삭제에 실패하였습니다."),
@@ -32,6 +32,7 @@ public enum ErrorStatus implements BaseErrorCode {
     TRANSCRIPT_NOT_AVAILABLE(HttpStatus.NOT_FOUND, "TEST4001", "이 동영상은 영어 자막이 없습니다."),
     TRANSCRIPT_EXTRACTION_FAILED(HttpStatus.NOT_FOUND, "TEST4002", "자막 추출에 실패하였습니다."),
     TEST_GENERATION_FAILED(HttpStatus.NOT_FOUND, "TEST4003", "테스트 생성에 실패하였습니다.");
+
 
     private final HttpStatus httpStatus;
     private final String code;

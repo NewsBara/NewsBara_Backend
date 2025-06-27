@@ -4,16 +4,18 @@ import com.example.newsbara.global.common.apiPayload.ApiResponse;
 import com.example.newsbara.user.dto.req.NameReqDto;
 import com.example.newsbara.user.dto.res.MypageResDto;
 import com.example.newsbara.user.dto.res.NameResDto;
+import com.example.newsbara.user.dto.res.ProfileResDto;
 import com.example.newsbara.user.dto.res.UserInfoResDto;
 import com.example.newsbara.user.service.MypageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
+
+import static org.apache.tomcat.util.http.fileupload.FileUploadBase.MULTIPART_FORM_DATA;
 
 
 @RestController
@@ -43,5 +45,15 @@ public class MypageController {
     public ApiResponse<NameResDto> putName(Principal principal, NameReqDto request) {
 
         return ApiResponse.onSuccess(mypageService.putName(principal, request));
+    }
+
+    @PutMapping(value = "/profile", consumes = {"multipart/form-data"})
+    @Operation(summary = "프로필 사진 수정 API",
+            description = "프로필 사진을 수정하는 API입니다.")
+    ApiResponse<ProfileResDto> putProfile(
+            Principal principal,
+            @RequestPart(value = "file", required = false) MultipartFile file
+    ) {
+        return ApiResponse.onSuccess(mypageService.putProfile(principal, file));
     }
 }

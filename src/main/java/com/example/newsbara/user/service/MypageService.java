@@ -6,10 +6,12 @@ import com.example.newsbara.user.domain.User;
 import com.example.newsbara.user.dto.req.NameReqDto;
 import com.example.newsbara.user.dto.res.MypageResDto;
 import com.example.newsbara.user.dto.res.NameResDto;
+import com.example.newsbara.user.dto.res.ProfileResDto;
 import com.example.newsbara.user.dto.res.UserInfoResDto;
 import com.example.newsbara.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 
@@ -44,5 +46,8 @@ public class MypageService {
 
 
         return NameResDto.fromEntity(userRepository.save(user));
+    }
+
+    public ProfileResDto putProfile(Principal principal, MultipartFile file) {
     }
 }

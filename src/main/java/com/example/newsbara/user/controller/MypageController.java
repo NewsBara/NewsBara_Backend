@@ -41,19 +41,22 @@ public class MypageController {
 
     @PutMapping("/name")
     @Operation(summary = "이름 수정 API",
-            description = "마이페이지 메인 화면에 있는 회원 정보를 조회하는 API입니다.")
-    public ApiResponse<NameResDto> putName(Principal principal, NameReqDto request) {
-
+            description = "사용자의 이름을 수정하는 API입니다.")
+    public ApiResponse<NameResDto> putName(
+            Principal principal,
+            @RequestBody NameReqDto request) {
         return ApiResponse.onSuccess(mypageService.putName(principal, request));
     }
+
 
     @PutMapping(value = "/profile", consumes = {"multipart/form-data"})
     @Operation(summary = "프로필 사진 수정 API",
             description = "프로필 사진을 수정하는 API입니다.")
-    ApiResponse<ProfileResDto> putProfile(
+    public ApiResponse<ProfileResDto> putProfile(
             Principal principal,
             @RequestPart(value = "file", required = false) MultipartFile file
     ) {
         return ApiResponse.onSuccess(mypageService.putProfile(principal, file));
     }
+
 }

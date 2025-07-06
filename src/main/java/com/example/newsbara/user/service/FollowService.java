@@ -34,6 +34,7 @@ public class FollowService {
         this.userRepository = userRepository;
     }
 
+    // 친구 신청
     @Transactional
     public FollowAddResDto addFollow(Integer userId, Principal principal) {
         User follower = userRepository.findByEmail(principal.getName())
@@ -72,6 +73,7 @@ public class FollowService {
         return FollowAddResDto.fromEntity(followRepository.save(follow));
     }
 
+    // 친구 요청 목록
     @Transactional(readOnly = true)
     public List<FollowResListDto> getRequests(Principal principal) {
         User user = userRepository.findByEmail(principal.getName())
@@ -82,6 +84,7 @@ public class FollowService {
         return pendingRequests.stream().map(FollowResListDto::fromEntity).collect(Collectors.toList());
     }
 
+    // 친구 요청 처리
     @Transactional
     public HandleResDto handleRequest(Long requestId, HandleReqDto request, Principal principal) {
         User user = userRepository.findByEmail(principal.getName())
@@ -90,14 +93,16 @@ public class FollowService {
         Follow follow = followRepository.findById(requestId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.FOLLOW_NOT_FOUND));
 
+        // 자기 자신에게 요청
         if (!follow.getFollowing().getId().equals(user.getId())) {
             throw new GeneralException(ErrorStatus._UNAUTHORIZED);
         }
 
+
+        // 상태에 따른 예외처리
         if (follow.getStatus() != FollowStatus.PENDING) {
             throw new GeneralException(ErrorStatus.REQUEST_ALREADY_HANDLED);
         }
-
         if (request.getFollowStatus() == FollowStatus.ACCEPTED) {
             follow.updateStatus(FollowStatus.ACCEPTED);
         } else if (request.getFollowStatus() == FollowStatus.REJECTED) {
@@ -107,6 +112,7 @@ public class FollowService {
         return HandleResDto.fromEntity(followRepository.save(follow));
     }
 
+    // 사용자 검색
     @Transactional(readOnly = true)
     public List<SearchResDto> searchUsers(String name, Principal principal) {
 
@@ -130,5 +136,16 @@ public class FollowService {
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    // 친구 목록 조회
+    @Transactional(readOnly = true)
+    public List<FollowResListDto> getFriends(Principal principal) {
+        User user = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+
+        List<Follow> follows = followRepository.findAcceptedFollowsByUser(user, FollowStatus.ACCEPTED);
+
+        return follows.stream().map(FollowResListDto::fromEntity).collect(Collectors.toList());
     }
 }

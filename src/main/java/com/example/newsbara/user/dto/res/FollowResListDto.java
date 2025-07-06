@@ -30,6 +30,19 @@ public class FollowResListDto {
                 .followStatus(follow.getStatus())
                 .build();
     }
+
+    public static FollowResListDto fromEntity(Follow follow, User me) {
+        User friend = follow.getFollower().equals(me) ? follow.getFollowing() : follow.getFollower();
+
+        return FollowResListDto.builder()
+                .id(follow.getId())
+                .followerId(friend.getId())
+                .followerName(friend.getName())
+                .followerPoint(friend.getPoint())
+                .followerProfileImage(friend.getProfileImg())
+                .followStatus(follow.getStatus())
+                .build();
+    }
 }
 
 

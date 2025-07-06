@@ -120,9 +120,7 @@ public class FollowService {
             User following = follow.getFollowing();
 
             Optional<Follow> reverseFollow = followRepository.findByFollowerAndFollowing(following, follower);
-            if (reverseFollow.isPresent() && reverseFollow.get().getStatus() == FollowStatus.PENDING) {
-                followRepository.delete(reverseFollow.get());
-            }
+            reverseFollow.ifPresent(followRepository::delete);
         } else if (request.getFollowStatus() == FollowStatus.REJECTED) {
             follow.updateStatus(FollowStatus.REJECTED);
         }
@@ -155,6 +153,8 @@ public class FollowService {
 
         List<Follow> follows = followRepository.findAcceptedFollowsByUser(user, FollowStatus.ACCEPTED);
 
-        return follows.stream().map(FollowResListDto::fromEntity).collect(Collectors.toList());
+        return follows.stream()
+                .map(f -> FollowResListDto.fromEntity(f, user))  // ✅ user 넘김
+                .collect(Collectors.toList());
     }
 }

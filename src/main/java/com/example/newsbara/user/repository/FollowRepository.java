@@ -1,7 +1,13 @@
 package com.example.newsbara.user.repository;
 
+import com.example.newsbara.user.domain.Follow;
+import com.example.newsbara.user.domain.User;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
-public interface FollowRepository {
+public interface FollowRepository extends JpaRepository<Follow, Long> {
+    Optional<Follow> findByFollowerAndFollowing(User follower, User following);
 }

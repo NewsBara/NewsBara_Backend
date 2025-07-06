@@ -24,6 +24,7 @@ public enum ErrorStatus implements BaseErrorCode {
     USER_NOT_AUTHENTICATED(HttpStatus.UNAUTHORIZED, "USER4004", "인증된 사용자가 존재하지 않습니다."),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "USER4005","유효하지 않은 토큰입니다."),
     NAME_IS_NULL(HttpStatus.BAD_REQUEST, "USER4006", "이름은 비어있어선 안됩니다."),
+
     // 파일 관련 에러 추가
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE4001", "파일 업로드에 실패하였습니다."),
     FILE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE4002", "파일 삭제에 실패하였습니다."),
@@ -32,8 +33,12 @@ public enum ErrorStatus implements BaseErrorCode {
     // 테스트 관련 에러 추가
     TRANSCRIPT_NOT_AVAILABLE(HttpStatus.NOT_FOUND, "TEST4001", "이 동영상은 영어 자막이 없습니다."),
     TRANSCRIPT_EXTRACTION_FAILED(HttpStatus.NOT_FOUND, "TEST4002", "자막 추출에 실패하였습니다."),
-    TEST_GENERATION_FAILED(HttpStatus.NOT_FOUND, "TEST4003", "테스트 생성에 실패하였습니다.");
+    TEST_GENERATION_FAILED(HttpStatus.NOT_FOUND, "TEST4003", "테스트 생성에 실패하였습니다."),
 
+    // 팔로우 관려 에러
+    CANNOT_ADD_SELF(HttpStatus.BAD_REQUEST, "FOLLOW4001", "자신은 친구로 추가할 수 없습니다."),
+    DUPLICATE_FRIEND_REQUEST(HttpStatus.CONFLICT, "FOLLOW4002", "이미 친구 신청을 보냈습니다."),
+    ALREADY_FRIENDS(HttpStatus.CONFLICT, "FOLLOW4003", "이미 친구입니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

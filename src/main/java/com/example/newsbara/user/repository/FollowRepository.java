@@ -18,4 +18,8 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
     // 받은 친구 요청 목록 (최신순)
     @Query("SELECT f FROM Follow f WHERE f.following = :user AND f.status = :status ORDER BY f.createdAt DESC")
     List<Follow> findPendingRequestsByUser(@Param("user") User user, @Param("status") FollowStatus status);
+
+    // 사용자 검색 (이름으로)
+    @Query("SELECT u FROM User u WHERE u.name LIKE %:name% AND u != :currentUser")
+    List<User> searchUsersByName(@Param("name") String name, @Param("currentUser") User currentUser);
 }

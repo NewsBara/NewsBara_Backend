@@ -109,5 +109,26 @@ public class FollowService {
 
     @Transactional(readOnly = true)
     public List<SearchResDto> searchUsers(String name, Principal principal) {
+
+        User currentUser = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+
+        List<User> users = followRepository.searchUsersByName(name, currentUser);
+
+        return users.stream()
+                .map(user -> {
+                    Optional<Follow> followRelation = followRepository.findByFollowerAndFollowing(currentUser, user);
+                    boolean isFollowing = followRelation.isPresent() && followRelation.get().getStatus() == FollowStatus.ACCEPTED;
+                    boolean isPending = followRelation.isPresent() && followRelation.get().getStatus() == FollowStatus.PENDING;
+
+                    return SearchResDto.builder()
+                            .userId(user.getId())
+                            .userName(user.getName())
+                            .profileImage(user.getProfileImg())
+                            .isFollowing(isFollowing)
+                            .isPending(isPending)
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 }

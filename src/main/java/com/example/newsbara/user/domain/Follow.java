@@ -2,6 +2,7 @@
 package com.example.newsbara.user.domain;
 
 import com.example.newsbara.global.common.BaseEntity;
+import com.example.newsbara.user.domain.enums.FollowStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,4 +31,11 @@ public class Follow extends BaseEntity {
     @JoinColumn(name = "following_id", nullable = false)
     private User following;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private FollowStatus status;
+
+    public void updateStatus(FollowStatus status) {
+        this.status = status;
+    }
 }

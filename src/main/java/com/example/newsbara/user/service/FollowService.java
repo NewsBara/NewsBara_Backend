@@ -9,6 +9,7 @@ import com.example.newsbara.user.dto.req.HandleReqDto;
 import com.example.newsbara.user.dto.res.FollowAddResDto;
 import com.example.newsbara.user.dto.res.FollowResListDto;
 import com.example.newsbara.user.dto.res.HandleResDto;
+import com.example.newsbara.user.dto.res.SearchResDto;
 import com.example.newsbara.user.repository.FollowRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -104,5 +105,9 @@ public class FollowService {
         }
 
         return HandleResDto.fromEntity(followRepository.save(follow));
+    }
+
+    @Transactional(readOnly = true)
+    public List<SearchResDto> searchUsers(String name, Principal principal) {
     }
 }

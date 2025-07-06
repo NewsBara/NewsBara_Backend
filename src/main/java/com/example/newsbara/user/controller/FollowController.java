@@ -6,6 +6,7 @@ import com.example.newsbara.user.dto.req.HandleReqDto;
 import com.example.newsbara.user.dto.res.FollowAddResDto;
 import com.example.newsbara.user.dto.res.FollowResListDto;
 import com.example.newsbara.user.dto.res.HandleResDto;
+import com.example.newsbara.user.dto.res.SearchResDto;
 import com.example.newsbara.user.service.FollowService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.*;
@@ -51,5 +52,14 @@ public class FollowController {
             Principal principal) {
 
         return ApiResponse.onSuccess(followService.handleRequest(requestId, request, principal));
+    }
+
+    // 사용자 검색 (친구 추가용)
+    @GetMapping("/search")
+    public ApiResponse<List<SearchResDto>> searchUsers(
+            @RequestParam String name,
+            Principal principal) {
+
+        return ApiResponse.onSuccess(followService.searchUsers(name, principal));
     }
 }

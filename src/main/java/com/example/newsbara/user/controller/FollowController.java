@@ -2,9 +2,10 @@ package com.example.newsbara.user.controller;
 
 import com.example.newsbara.global.common.apiPayload.ApiResponse;
 
-import com.example.newsbara.user.dto.req.FollowAddReqDto;
+import com.example.newsbara.user.dto.req.HandleReqDto;
 import com.example.newsbara.user.dto.res.FollowAddResDto;
 import com.example.newsbara.user.dto.res.FollowResListDto;
+import com.example.newsbara.user.dto.res.HandleResDto;
 import com.example.newsbara.user.service.FollowService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.*;
@@ -22,13 +23,13 @@ public class FollowController {
     }
 
     // 친구 신청
-    @PostMapping("/add")
+    @PostMapping("/{userId}/add")
     @Operation(summary = "친구 신청 API",
             description = "다른 사용자에게 친구 신청을 보내는 API입니다.")
     public ApiResponse<FollowAddResDto> addFollow(
-            @RequestBody FollowAddReqDto followReqDto,
+            @PathVariable Integer userId,
             Principal principal) {
-        return  ApiResponse.onSuccess(followService.addFollow(principal, followReqDto));
+        return  ApiResponse.onSuccess(followService.addFollow(userId, principal));
     }
 
     // 받은 친구 요청 목록
@@ -40,4 +41,15 @@ public class FollowController {
         return  ApiResponse.onSuccess(followService.getRequests(principal));
     }
 
+    // 친구 요청 처리 (수락/거절)
+    @PatchMapping("/requests/{requestId}")
+    @Operation(summary = "친구 수락/거절 API",
+            description = "자신에게 온 친구 요청을 거절/수락하는 API입니다.")
+    public ApiResponse<HandleResDto> handleRequest(
+            @PathVariable Long requestId,
+            @RequestBody HandleReqDto request,
+            Principal principal) {
+
+        return ApiResponse.onSuccess(followService.handleRequest(requestId, request, principal));
+    }
 }

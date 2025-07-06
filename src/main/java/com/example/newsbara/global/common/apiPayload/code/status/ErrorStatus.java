@@ -38,7 +38,8 @@ public enum ErrorStatus implements BaseErrorCode {
     // 팔로우 관려 에러
     CANNOT_ADD_SELF(HttpStatus.BAD_REQUEST, "FOLLOW4001", "자신은 친구로 추가할 수 없습니다."),
     DUPLICATE_FRIEND_REQUEST(HttpStatus.CONFLICT, "FOLLOW4002", "이미 친구 신청을 보냈습니다."),
-    ALREADY_FRIENDS(HttpStatus.CONFLICT, "FOLLOW4003", "이미 친구입니다.");
+    REQUEST_ALREADY_HANDLED(HttpStatus.CONFLICT, "FOLLOW4003", "이미 처리된 요청입니다."),
+    FOLLOW_NOT_FOUND(HttpStatus.NOT_FOUND, "FOLLOW4004", "친구 요청을 찾을 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

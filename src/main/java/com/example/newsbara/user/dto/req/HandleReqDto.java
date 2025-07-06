@@ -1,5 +1,6 @@
 package com.example.newsbara.user.dto.req;
 
+import com.example.newsbara.user.domain.enums.FollowStatus;
 import lombok.*;
 
 @Getter
@@ -7,6 +8,6 @@ import lombok.*;
 @AllArgsConstructor
 @Setter
 @Builder
-public class FollowAddReqDto {
-    private Integer followingId;
+public class HandleReqDto {
+    private FollowStatus followStatus;
 }

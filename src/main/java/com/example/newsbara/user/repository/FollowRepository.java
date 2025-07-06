@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface FollowRepository extends JpaRepository<Follow, Long> {
+public interface FollowRepository extends JpaRepository<Follow, Integer> {
     Optional<Follow> findByFollowerAndFollowing(User follower, User following);
 
     // 받은 친구 요청 목록 (최신순)

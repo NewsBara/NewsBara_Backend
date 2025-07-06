@@ -47,21 +47,31 @@ public class FollowService {
             throw new GeneralException(ErrorStatus.CANNOT_ADD_SELF);  //IllegalArgumentException("자신에게 친구 신청할 수 없습니다.");
         }
 
-        // 이미 관계가 있는지 확인
+        // 1. 같은 방향 체크 (A→B)
         Optional<Follow> existingFollow = followRepository.findByFollowerAndFollowing(follower, following);
-
         if (existingFollow.isPresent()) {
             Follow existFollow = existingFollow.get();
-
             if (existFollow.getStatus() == FollowStatus.PENDING) {
                 throw new GeneralException(ErrorStatus.DUPLICATE_FRIEND_REQUEST);
             } else if (existFollow.getStatus() == FollowStatus.ACCEPTED) {
-                throw new GeneralException(ErrorStatus.REQUEST_ALREADY_HANDLED);
+                throw new GeneralException(ErrorStatus.ALREADY_FRIENDS);
             } else if (existFollow.getStatus() == FollowStatus.REJECTED) {
-                // 거절된 상태면 다시 PENDING으로 변경 (재요청 허용)
+                // 거절된 상태면 재신청 허용
                 existFollow.updateStatus(FollowStatus.PENDING);
                 return FollowAddResDto.fromEntity(followRepository.save(existFollow));
             }
+        }
+
+        // 2. 반대 방향 체크 (B→A)
+        Optional<Follow> reverseFollow = followRepository.findByFollowerAndFollowing(following, follower);
+        if (reverseFollow.isPresent()) {
+            Follow reverseFollowEntity = reverseFollow.get();
+            if (reverseFollowEntity.getStatus() == FollowStatus.PENDING) {
+                throw new GeneralException(ErrorStatus.FRIEND_REQUEST_EXISTS); // "상대방이 이미 친구 신청을 보냈습니다"
+            } else if (reverseFollowEntity.getStatus() == FollowStatus.ACCEPTED) {
+                throw new GeneralException(ErrorStatus.ALREADY_FRIENDS);
+            }
+            // REJECTED 상태면 신청 허용
         }
 
         Follow follow = Follow.builder()
@@ -86,7 +96,7 @@ public class FollowService {
 
     // 친구 요청 처리
     @Transactional
-    public HandleResDto handleRequest(Long requestId, HandleReqDto request, Principal principal) {
+    public HandleResDto handleRequest(Integer requestId, HandleReqDto request, Principal principal) {
         User user = userRepository.findByEmail(principal.getName())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
@@ -98,13 +108,21 @@ public class FollowService {
             throw new GeneralException(ErrorStatus._UNAUTHORIZED);
         }
 
-
         // 상태에 따른 예외처리
         if (follow.getStatus() != FollowStatus.PENDING) {
             throw new GeneralException(ErrorStatus.REQUEST_ALREADY_HANDLED);
         }
         if (request.getFollowStatus() == FollowStatus.ACCEPTED) {
             follow.updateStatus(FollowStatus.ACCEPTED);
+
+            // 반대 방향 PENDING 요청이 있으면 삭제
+            User follower = follow.getFollower();
+            User following = follow.getFollowing();
+
+            Optional<Follow> reverseFollow = followRepository.findByFollowerAndFollowing(following, follower);
+            if (reverseFollow.isPresent() && reverseFollow.get().getStatus() == FollowStatus.PENDING) {
+                followRepository.delete(reverseFollow.get());
+            }
         } else if (request.getFollowStatus() == FollowStatus.REJECTED) {
             follow.updateStatus(FollowStatus.REJECTED);
         }
@@ -112,10 +130,9 @@ public class FollowService {
         return HandleResDto.fromEntity(followRepository.save(follow));
     }
 
-    // 사용자 검색
+    // 사용자 검색 (개선 버전)
     @Transactional(readOnly = true)
     public List<SearchResDto> searchUsers(String name, Principal principal) {
-
         User currentUser = userRepository.findByEmail(principal.getName())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
@@ -124,20 +141,12 @@ public class FollowService {
         return users.stream()
                 .map(user -> {
                     Optional<Follow> followRelation = followRepository.findByFollowerAndFollowing(currentUser, user);
-                    boolean isFollowing = followRelation.isPresent() && followRelation.get().getStatus() == FollowStatus.ACCEPTED;
-                    boolean isPending = followRelation.isPresent() && followRelation.get().getStatus() == FollowStatus.PENDING;
+                    Optional<Follow> reverseRelation = followRepository.findByFollowerAndFollowing(user, currentUser);
 
-                    return SearchResDto.builder()
-                            .userId(user.getId())
-                            .userName(user.getName())
-                            .profileImage(user.getProfileImg())
-                            .isFollowing(isFollowing)
-                            .isPending(isPending)
-                            .build();
+                    return SearchResDto.fromEntity(user, currentUser, followRelation, reverseRelation);
                 })
                 .collect(Collectors.toList());
     }
-
     // 친구 목록 조회
     @Transactional(readOnly = true)
     public List<FollowResListDto> getFriends(Principal principal) {

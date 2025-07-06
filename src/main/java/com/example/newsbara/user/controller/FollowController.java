@@ -47,7 +47,7 @@ public class FollowController {
     @Operation(summary = "친구 수락/거절 API",
             description = "자신에게 온 친구 요청을 거절/수락하는 API입니다.")
     public ApiResponse<HandleResDto> handleRequest(
-            @PathVariable Long requestId,
+            @PathVariable Integer requestId,
             @RequestBody HandleReqDto request,
             Principal principal) {
 

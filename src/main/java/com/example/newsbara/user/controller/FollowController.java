@@ -56,10 +56,22 @@ public class FollowController {
 
     // 사용자 검색 (친구 추가용)
     @GetMapping("/search")
+    @Operation(summary = "사용자 검색 API",
+            description = "이름을 이용해 사용자를 검색하는 API입니다.")
     public ApiResponse<List<SearchResDto>> searchUsers(
             @RequestParam String name,
             Principal principal) {
 
         return ApiResponse.onSuccess(followService.searchUsers(name, principal));
+    }
+
+    // 친구 목록 조회
+    @GetMapping("/friends")
+    @Operation(summary = "친구 목록 조회 API",
+            description = "친구 목록을 포인트 내림차순으로 조회하는 API입니다.")
+    public ApiResponse<List<FollowResListDto>> getFriends(
+            Principal principal) {
+
+        return ApiResponse.onSuccess(followService.getFriends(principal));
     }
 }

@@ -18,4 +18,4 @@ RUN mkdir -p /app/config
 COPY ${JAR_FILE} app.jar
 
 # 앱 실행
-ENTRYPOINT ["java", "-Dspring.profiles.active=${PROFILES}", "-Dspring.env=${ENV}", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Xmx256m", "-Xms128m", "-Dspring.profiles.active=${PROFILES}", "-Dspring.env=${ENV}", "-jar", "app.jar"]

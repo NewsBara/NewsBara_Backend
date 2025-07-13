@@ -41,7 +41,11 @@ public enum ErrorStatus implements BaseErrorCode {
     REQUEST_ALREADY_HANDLED(HttpStatus.CONFLICT, "FOLLOW4003", "이미 처리된 요청입니다."),
     FOLLOW_NOT_FOUND(HttpStatus.NOT_FOUND, "FOLLOW4004", "친구 요청을 찾을 수 없습니다."),
     FRIEND_REQUEST_EXISTS(HttpStatus.CONFLICT, "FOLLOW4005","상대방이 이미 친구 신청을 보냈습니다"),
-    ALREADY_FRIENDS(HttpStatus.BAD_REQUEST, "FOLLOW4006","이미 친구 관계입니다");
+    ALREADY_FRIENDS(HttpStatus.BAD_REQUEST, "FOLLOW4006","이미 친구 관계입니다"),
+
+    // 점수 관련 에러
+    DUPLICATE_TEST_TYPE(HttpStatus.BAD_REQUEST, "DUPLICATE_TEST_TYPE", "같은 시험 유형은 중복으로 입력할 수 없습니다.");
+
 
     private final HttpStatus httpStatus;
     private final String code;

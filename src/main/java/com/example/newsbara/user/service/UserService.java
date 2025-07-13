@@ -60,7 +60,7 @@ public class UserService {
                     .collect(Collectors.toSet());
 
             if (testTypes.size() != request.getScores().size()) {
-                throw new GeneralException(ErrorStatus.DUPLICATE_TEST_TYPE); // 에러 상태 추가 필요
+                throw new GeneralException(ErrorStatus.DUPLICATE_TEST_TYPE);
             }
         }
 

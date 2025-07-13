@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.security.Principal;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -39,8 +40,10 @@ public class TestService {
         User user = userRepository.findByEmail(principal.getName())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
-        // 최신 Score를 가져오되 없으면 null
-        Score userScore = scoreRepository.findTopByUserOrderByCreatedAtDesc(user).orElse(null);
+        // null을 허용
+        List<Score> userScore = scoreRepository.findAllByUser(user);
+
+        userScore = userScore.isEmpty() ? null : userScore;
 
         try {
             logger.info("Attempting to generate test for video: {} by user: {}", videoId, user.getEmail());

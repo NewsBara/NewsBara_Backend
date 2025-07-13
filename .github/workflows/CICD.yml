@@ -1,67 +1,89 @@
-name: CI
+name: CI/CD Pipeline
+
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+
 permissions:
   contents: read
-  
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      current_upstream: ${{ steps.set-env.outputs.current_upstream }}
+      current_port: ${{ steps.set-env.outputs.current_port }}
+      stopped_port: ${{ steps.set-env.outputs.stopped_port }}
+      target_upstream: ${{ steps.set-env.outputs.target_upstream }}
+
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
       - name: Install JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          
+
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
-        
+
+      - name: Create application secret file
+        run: |
+          mkdir -p ./src/main/resources
+          echo '${{ secrets.APPLICATION_SECRET }}' | base64 --decode > ./src/main/resources/application-secret.yml
+
       - name: Build with Gradle
         run: |
-          echo ${{secrets.APPLICATION_SECRET}} | base64 --decode > ./src/main/resources/application-secret.yml
-          chmod 777 ./gradlew
+          chmod +x ./gradlew
           ./gradlew clean build -x test
-          
+
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build Docker
-        run: docker build --platform linux/amd64 -t ${{ secrets.DOCKERHUB_USERNAME }}/newsbara .
-      - name: Push Docker
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/newsbara:latest
-        
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build --platform linux/amd64 -t ${{ secrets.DOCKERHUB_USERNAME }}/newsbara:latest .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/newsbara:latest
+
+      - name: Set deployment environment
+        id: set-env
+        run: |
+          STATUS=$(curl -o /dev/null -w "%{http_code}" "http://${{ secrets.LIVE_SERVER_IP }}/env" || echo "000")
+          echo "Status: $STATUS"
+          
+          if [ "$STATUS" = "200" ]; then
+            CURRENT_UPSTREAM=$(curl -s "http://${{ secrets.LIVE_SERVER_IP }}/env" || echo "green")
+          else
+            CURRENT_UPSTREAM="green"
+          fi
+          
+          echo "Current upstream: $CURRENT_UPSTREAM"
+          
+          if [ "$CURRENT_UPSTREAM" = "blue" ]; then
+            echo "current_upstream=blue" >> $GITHUB_OUTPUT
+            echo "current_port=8080" >> $GITHUB_OUTPUT
+            echo "stopped_port=8081" >> $GITHUB_OUTPUT
+            echo "target_upstream=green" >> $GITHUB_OUTPUT
+          else
+            echo "current_upstream=green" >> $GITHUB_OUTPUT
+            echo "current_port=8081" >> $GITHUB_OUTPUT
+            echo "stopped_port=8080" >> $GITHUB_OUTPUT
+            echo "target_upstream=blue" >> $GITHUB_OUTPUT
+          fi
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
     steps:
-      - name: Set target IP
-        run: |
-          STATUS=$(curl -o /dev/null -w "%{http_code}" "http://${{ secrets.LIVE_SERVER_IP }}/env")
-          echo $STATUS
-          if [ $STATUS = 200 ]; then
-            CURRENT_UPSTREAM=$(curl -s "http://${{ secrets.LIVE_SERVER_IP }}/env")
-          else
-            CURRENT_UPSTREAM=green
-          fi
-          echo CURRENT_UPSTREAM=$CURRENT_UPSTREAM >> $GITHUB_ENV
-          if [ $CURRENT_UPSTREAM = blue ]; then
-            echo "CURRENT_PORT=8080" >> $GITHUB_ENV
-            echo "STOPPED_PORT=8081" >> $GITHUB_ENV
-            echo "TARGET_UPSTREAM=green" >> $GITHUB_ENV
-          else
-            echo "CURRENT_PORT=8081" >> $GITHUB_ENV
-            echo "STOPPED_PORT=8080" >> $GITHUB_ENV
-            echo "TARGET_UPSTREAM=blue" >> $GITHUB_ENV
-          fi
-          
-      - name: Docker compose
+      - name: Deploy new version
         uses: appleboy/ssh-action@master
         with:
           username: ubuntu
@@ -69,17 +91,21 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script_stop: true
           script: |
+            echo "Deploying to ${{ needs.build.outputs.target_upstream }}"
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/newsbara:latest
-            sudo docker-compose -f docker-compose-${{env.TARGET_UPSTREAM}}.yml up -d
-      
-      - name: Check deploy server URL
+            sudo docker-compose -f docker-compose-${{ needs.build.outputs.target_upstream }}.yml up -d
+
+      - name: Wait for deployment
+        run: sleep 30
+
+      - name: Health check new deployment
         uses: jtalk/url-health-check-action@v3
         with:
-          url: http://${{ secrets.LIVE_SERVER_IP }}:${{env.STOPPED_PORT}}/env
-          max-attempts: 3
+          url: http://${{ secrets.LIVE_SERVER_IP }}:${{ needs.build.outputs.stopped_port }}/env
+          max-attempts: 5
           retry-delay: 10s
-          
-      - name: Change nginx upstream
+
+      - name: Switch nginx upstream
         uses: appleboy/ssh-action@master
         with:
           username: ubuntu
@@ -87,9 +113,17 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script_stop: true
           script: |
-            sudo docker exec -i nginxserver bash -c 'echo "set \$service_url ${{ env.TARGET_UPSTREAM }};" > /etc/nginx/conf.d/service-env.inc && nginx -s reload' 
-      
-      - name: Stop current server
+            echo "Switching nginx upstream to ${{ needs.build.outputs.target_upstream }}"
+            sudo docker exec -i nginxserver bash -c 'echo "set \$service_url ${{ needs.build.outputs.target_upstream }};" > /etc/nginx/conf.d/service-env.inc && nginx -s reload'
+
+      - name: Verify switch
+        uses: jtalk/url-health-check-action@v3
+        with:
+          url: http://${{ secrets.LIVE_SERVER_IP }}/env
+          max-attempts: 3
+          retry-delay: 5s
+
+      - name: Stop old server
         uses: appleboy/ssh-action@master
         with:
           username: ubuntu
@@ -97,5 +131,16 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script_stop: true
           script: |
-            sudo docker stop ${{env.CURRENT_UPSTREAM}} || true
-            sudo docker rm ${{env.CURRENT_UPSTREAM}} || true
+            echo "Stopping old server: ${{ needs.build.outputs.current_upstream }}"
+            sudo docker stop ${{ needs.build.outputs.current_upstream }} || true
+            sudo docker rm ${{ needs.build.outputs.current_upstream }} || true
+
+      - name: Cleanup old images
+        uses: appleboy/ssh-action@master
+        with:
+          username: ubuntu
+          host: ${{ secrets.LIVE_SERVER_IP }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            sudo docker image prune -f

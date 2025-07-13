@@ -2,18 +2,27 @@ package com.example.newsbara.test.util;
 
 import com.example.newsbara.score.domain.Score;
 
+import java.util.List;
+
 public class GptPromptBuilder {
 
-    public static String buildPrompt(String transcript, Score userScore) {
+    public static String buildPrompt(String transcript, List<Score> userScore) {
         StringBuilder prompt = new StringBuilder();
 
         prompt.append("Based on the following YouTube video transcript, please create ")
                 .append("a fill-in-the-blank summary question");
 
-        if (userScore != null) {
-            int score = userScore.getScore();
-            String testType = String.valueOf(userScore.getTestType());
-            prompt.append(" at ").append(testType).append(" ").append(score).append(" level");
+        // userScore가 null이 아니고 비어있지 않은 경우 처리
+        if (userScore != null && !userScore.isEmpty()) {
+            // 각 점수별로 난이도 조정 (여러 점수가 있는 경우)
+            StringBuilder levelInfo = new StringBuilder();
+            for (Score score : userScore) {
+                if (levelInfo.length() > 0) {
+                    levelInfo.append(", ");
+                }
+                levelInfo.append(score.getTestType()).append(" ").append(score.getScore());
+            }
+            prompt.append(" considering user's proficiency levels: ").append(levelInfo);
         }
 
         prompt.append(". ")

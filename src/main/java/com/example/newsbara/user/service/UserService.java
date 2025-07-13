@@ -5,6 +5,9 @@ import com.example.newsbara.badge.service.BadgeService;
 import com.example.newsbara.global.common.apiPayload.code.status.ErrorStatus;
 import com.example.newsbara.global.common.apiPayload.exception.GeneralException;
 import com.example.newsbara.global.common.security.TokenProvider;
+import com.example.newsbara.score.domain.Score;
+import com.example.newsbara.score.domain.enums.TestType;
+import com.example.newsbara.score.repository.ScoreRepository;
 import com.example.newsbara.user.domain.User;
 import com.example.newsbara.user.dto.req.PointReqDto;
 import com.example.newsbara.user.dto.req.UserLoginReqDto;
@@ -20,6 +23,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.security.Principal;
 import java.time.Duration;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -29,14 +35,16 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final TokenProvider tokenProvider;
     private final RedisTemplate<String, String> redisTemplate;
+    private final ScoreRepository scoreRepository; // ScoreRepository 추가
 
     public UserService(UserRepository userRepository, BadgeService badgeService, PasswordEncoder passwordEncoder,
-                       TokenProvider tokenProvider, RedisTemplate<String, String> redisTemplate) {
+                       TokenProvider tokenProvider, RedisTemplate<String, String> redisTemplate, ScoreRepository scoreRepository) {
         this.userRepository = userRepository;
         this.badgeService = badgeService;
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
         this.redisTemplate = redisTemplate;
+        this.scoreRepository = scoreRepository;
     }
 
     @Transactional
@@ -45,11 +53,28 @@ public class UserService {
             throw new GeneralException(ErrorStatus.USER_ALREADY_EXISTS);
         }
 
+        // 점수 정보 검증 (같은 testType 중복 체크)
+        if (request.getScores() != null && !request.getScores().isEmpty()) {
+            Set<TestType> testTypes = request.getScores().stream()
+                    .map(UserSignupReqDto.ScoreDto::getTestType)
+                    .collect(Collectors.toSet());
+
+            if (testTypes.size() != request.getScores().size()) {
+                throw new GeneralException(ErrorStatus.DUPLICATE_TEST_TYPE);
+            }
+        }
+
         User user = request.toEntity();
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
 
-        return UserInfoResDto.fromEntity(user);
+        // 점수 정보 저장
+        if (request.getScores() != null && !request.getScores().isEmpty()) {
+            List<Score> scores = request.toScoreEntities(savedUser);
+            scoreRepository.saveAll(scores);
+        }
+
+        return UserInfoResDto.fromEntity(savedUser);
     }
 
     @Transactional

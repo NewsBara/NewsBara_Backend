@@ -72,10 +72,3 @@ spring:
 app:
   temp:
     dir: "/tmp/youtube-transcripts"  # Docker 환경에서 명시적 경로 설정
-
-# 로깅 설정 추가 (디버깅용)
-logging:
-  level:
-    com.example.newsbara.test.service.YoutubeTranscriptService: DEBUG
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p %pid --- [%15.15t] %-40.40logger{39} : %m%n"

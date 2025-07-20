@@ -47,6 +47,11 @@ public class MypageService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
         if (request.getName() != null && !request.getName().equals("")) {
+            if (!request.getName().equals(user.getName()) &&
+                    userRepository.existsByName(request.getName())) {
+                throw new GeneralException(ErrorStatus.NAME_ALREADY_EXISTS);
+            }
+
             user.setName(request.getName());
         } else {
             throw new GeneralException(ErrorStatus.NAME_IS_NULL);

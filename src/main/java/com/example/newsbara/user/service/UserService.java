@@ -64,6 +64,10 @@ public class UserService {
             }
         }
 
+        if (userRepository.existsByName(request.getName())){
+            throw new GeneralException(ErrorStatus.NAME_ALREADY_EXISTS);
+        }
+
         User user = request.toEntity();
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         User savedUser = userRepository.save(user);

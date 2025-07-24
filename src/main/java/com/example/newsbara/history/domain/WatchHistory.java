@@ -11,8 +11,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "WatchHistory", indexes = {
-        @Index(name = "idx_video_id", columnList = "videoId"),
-        @Index(name = "idx_title", columnList = "title")
+        @Index(name = "idx_user_created_at", columnList = "user_id, created_at DESC")
 })
 @Getter
 @Setter

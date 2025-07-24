@@ -24,6 +24,7 @@ public enum ErrorStatus implements BaseErrorCode {
     USER_NOT_AUTHENTICATED(HttpStatus.UNAUTHORIZED, "USER4004", "인증된 사용자가 존재하지 않습니다."),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "USER4005","유효하지 않은 토큰입니다."),
     NAME_IS_NULL(HttpStatus.BAD_REQUEST, "USER4006", "이름은 비어있어선 안됩니다."),
+    NAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "USER4007", "이미 존재하는 닉네임입니다."),
 
     // 파일 관련 에러 추가
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE4001", "파일 업로드에 실패하였습니다."),

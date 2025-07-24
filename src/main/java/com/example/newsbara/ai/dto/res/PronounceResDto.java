@@ -11,7 +11,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public class PronunceResDto {
+public class PronounceResDto {
     private Double score;
     private String recognizedText;
     private List<DifferenceDto> differences;

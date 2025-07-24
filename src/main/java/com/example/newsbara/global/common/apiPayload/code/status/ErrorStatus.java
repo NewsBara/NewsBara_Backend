@@ -45,8 +45,10 @@ public enum ErrorStatus implements BaseErrorCode {
     ALREADY_FRIENDS(HttpStatus.BAD_REQUEST, "FOLLOW4006","이미 친구 관계입니다"),
 
     // 점수 관련 에러
-    DUPLICATE_TEST_TYPE(HttpStatus.BAD_REQUEST, "DUPLICATE_TEST_TYPE", "같은 시험 유형은 중복으로 입력할 수 없습니다.");
+    DUPLICATE_TEST_TYPE(HttpStatus.BAD_REQUEST, "SCORE4001", "같은 시험 유형은 중복으로 입력할 수 없습니다."),
 
+    // API 관련 에러
+    EXTERNAL_API_ERROR(HttpStatus.BAD_REQUEST, "API4001", "스크립트 분석 API에 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

@@ -7,7 +7,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class PronunceReqDto {
+public class PronounceReqDto {
     private MultipartFile audio;
     private String script;
 }

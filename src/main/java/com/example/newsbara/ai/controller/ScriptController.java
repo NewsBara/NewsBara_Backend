@@ -1,6 +1,7 @@
 package com.example.newsbara.ai.controller;
 
 import com.example.newsbara.ai.dto.req.AnalysisReqDto;
+import com.example.newsbara.ai.dto.res.AnalysisResDto;
 import com.example.newsbara.ai.service.ExternalApiService;
 import com.example.newsbara.global.common.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,7 +25,7 @@ public class ScriptController {
 
     @GetMapping("/{videoId}")
     @Operation(summary = "스크립트 및 다의어 조회 API")
-    public ResponseEntity<ApiResponse<List<AnalysisReqDto>>> analyzeVideoByPath(
+    public ResponseEntity<ApiResponse<List<AnalysisResDto>>> analyzeVideoByPath(
             @PathVariable String videoId) {
 
         return ResponseEntity.ok(ApiResponse.onSuccess(externalApiService.analyzeVideo(videoId)));

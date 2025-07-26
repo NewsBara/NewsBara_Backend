@@ -1,19 +1,15 @@
 package com.example.newsbara.ai.service;
 
-import com.example.newsbara.ai.dto.req.AnalysisReqDto;
 import com.example.newsbara.ai.dto.res.AnalysisResDto;
 import com.example.newsbara.ai.dto.res.PronounceResDto;
 import com.example.newsbara.global.common.apiPayload.code.status.ErrorStatus;
 import com.example.newsbara.global.common.apiPayload.exception.GeneralException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -33,7 +29,7 @@ public class ExternalApiService {
     private String scriptUrl;
 
     @Value("${external.api.pronounce.url}")
-    private String pronunceUrl;
+    private String pronounceUrl;
 
     public ExternalApiService(WebClient webClient) {
         this.webClient = webClient;
@@ -42,6 +38,7 @@ public class ExternalApiService {
     /**
      * YouTube 영상 분석 API 호출
      */
+    @Transactional
     public List<AnalysisResDto> analyzeVideo(String videoId) {
         try {
             Map<String, String> requestBody = Map.of("video_id", videoId);
@@ -74,6 +71,7 @@ public class ExternalApiService {
     }
 
 
+    @Transactional
     public PronounceResDto evaluatePronunciation(MultipartFile audioFile, String script) {
         try {
             MultipartBodyBuilder builder = new MultipartBodyBuilder();
@@ -86,7 +84,7 @@ public class ExternalApiService {
                     script.substring(0, Math.min(50, script.length())));
 
             PronounceResDto result = webClient.post()
-                    .uri(pronunceUrl)
+                    .uri(pronounceUrl)
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(BodyInserters.fromMultipartData(builder.build()))
                     .retrieve()

@@ -30,6 +30,7 @@ public enum ErrorStatus implements BaseErrorCode {
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE4001", "파일 업로드에 실패하였습니다."),
     FILE_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FILE4002", "파일 삭제에 실패하였습니다."),
     FILE_IS_NULL(HttpStatus.BAD_REQUEST, "FILE4003", "파일이 비어있습니다."),
+    FILE_READ_ERROR(HttpStatus.BAD_REQUEST, "FILE4004", "파일을 읽는데 실패했습니다."),
 
     // 테스트 관련 에러 추가
     TRANSCRIPT_NOT_AVAILABLE(HttpStatus.NOT_FOUND, "TEST4001", "이 동영상은 영어 자막이 없습니다."),
@@ -48,7 +49,10 @@ public enum ErrorStatus implements BaseErrorCode {
     DUPLICATE_TEST_TYPE(HttpStatus.BAD_REQUEST, "SCORE4001", "같은 시험 유형은 중복으로 입력할 수 없습니다."),
 
     // API 관련 에러
-    EXTERNAL_API_ERROR(HttpStatus.BAD_REQUEST, "API4001", "스크립트 분석 API에 오류가 발생했습니다.");
+    EXTERNAL_API_ERROR(HttpStatus.BAD_REQUEST, "API4001", "스크립트 분석 API에 오류가 발생했습니다."),
+
+    // 스크립트 관련 에러
+    SCRIPT_IS_NULL(HttpStatus.BAD_REQUEST, "SCRIPT4001", "스크립트가 비어있습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

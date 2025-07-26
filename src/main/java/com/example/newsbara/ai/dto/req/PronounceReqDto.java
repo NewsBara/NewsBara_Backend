@@ -4,10 +4,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
+
+import javax.validation.constraints.NotNull;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class PronounceReqDto {
-    private MultipartFile audio;
+    @NotNull
     private String script;
 }

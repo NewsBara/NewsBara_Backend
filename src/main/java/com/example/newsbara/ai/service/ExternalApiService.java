@@ -2,6 +2,7 @@ package com.example.newsbara.ai.service;
 
 import com.example.newsbara.ai.dto.req.AnalysisReqDto;
 import com.example.newsbara.ai.dto.res.AnalysisResDto;
+import com.example.newsbara.ai.dto.res.PronounceResDto;
 import com.example.newsbara.global.common.apiPayload.code.status.ErrorStatus;
 import com.example.newsbara.global.common.apiPayload.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -72,4 +74,42 @@ public class ExternalApiService {
     }
 
 
+    public PronounceResDto evaluatePronunciation(MultipartFile audioFile, String script) {
+        try {
+            MultipartBodyBuilder builder = new MultipartBodyBuilder();
+            builder.part("audio", audioFile.getBytes())
+                    .filename(audioFile.getOriginalFilename())
+                    .contentType(MediaType.MULTIPART_FORM_DATA);  // optional
+            builder.part("script", script);
+
+            log.info("Calling Pronunciation Evaluation API for script: {}",
+                    script.substring(0, Math.min(50, script.length())));
+
+            PronounceResDto result = webClient.post()
+                    .uri(pronunceUrl)
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(builder.build()))
+                    .retrieve()
+                    .onStatus(status -> !status.is2xxSuccessful(),
+                            clientResponse -> {
+                                log.error("API returned status: {}", clientResponse.statusCode());
+                                return Mono.error(new GeneralException(ErrorStatus.EXTERNAL_API_ERROR));
+                            })
+                    .bodyToMono(PronounceResDto.class)
+                    .block();
+            if (result != null) {
+                log.info("Successfully evaluated pronunciation. Score: {}", result.getScore());
+            }
+            return result;
+        } catch (IOException e) {
+            log.error("Error reading audio file", e);
+            throw new GeneralException(ErrorStatus.FILE_READ_ERROR);
+        } catch (WebClientResponseException e) {
+            log.error("Pronunciation Evaluation API error, status: {}", e.getStatusCode(), e);
+            throw new GeneralException(ErrorStatus.EXTERNAL_API_ERROR);
+        } catch (Exception e) {
+            log.error("Error calling Pronunciation Evaluation API", e);
+            throw new GeneralException(ErrorStatus.EXTERNAL_API_ERROR);
+        }
+    }
 }

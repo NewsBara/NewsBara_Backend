@@ -63,7 +63,9 @@ public class WebSecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOriginPatterns(List.of(
-                "http://localhost:3000"  // 추후 프론트 배포 주소 추가
+                "http://localhost:3000",
+                "https://newsbara.duckdns.org"  // 실제 배포 주소 추가
+
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));

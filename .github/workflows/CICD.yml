@@ -54,11 +54,13 @@ jobs:
       - name: Set deployment environment
         id: set-env
         run: |
-          STATUS=$(curl -o /dev/null -w "%{http_code}" "http://${{ secrets.LIVE_SERVER_IP }}/env" || echo "000")
+          # HTTPS로 변경, fallback을 HTTP로 시도
+          STATUS=$(curl -k -o /dev/null -w "%{http_code}" "https://${{ secrets.DOMAIN_NAME }}/env" 2>/dev/null || curl -o /dev/null -w "%{http_code}" "http://${{ secrets.LIVE_SERVER_IP }}/env" 2>/dev/null || echo "000")
           echo "Status: $STATUS"
           
           if [ "$STATUS" = "200" ]; then
-            CURRENT_UPSTREAM=$(curl -s "http://${{ secrets.LIVE_SERVER_IP }}/env" || echo "green")
+            # HTTPS 우선 시도, 실패하면 HTTP
+            CURRENT_UPSTREAM=$(curl -k -s "https://${{ secrets.DOMAIN_NAME }}/env" 2>/dev/null || curl -s "http://${{ secrets.LIVE_SERVER_IP }}/env" 2>/dev/null || echo "green")
           else
             CURRENT_UPSTREAM="green"
           fi
@@ -101,6 +103,7 @@ jobs:
       - name: Health check new deployment
         uses: jtalk/url-health-check-action@v3
         with:
+          # HTTP로 직접 포트 접근 (HTTPS는 nginx에서만 처리)
           url: http://${{ secrets.LIVE_SERVER_IP }}:${{ needs.build.outputs.stopped_port }}/env
           max-attempts: 5
           retry-delay: 10s
@@ -119,7 +122,8 @@ jobs:
       - name: Verify switch
         uses: jtalk/url-health-check-action@v3
         with:
-          url: http://${{ secrets.LIVE_SERVER_IP }}/env
+          # HTTPS 도메인으로 확인
+          url: https://${{ secrets.DOMAIN_NAME }}/env
           max-attempts: 3
           retry-delay: 5s
 

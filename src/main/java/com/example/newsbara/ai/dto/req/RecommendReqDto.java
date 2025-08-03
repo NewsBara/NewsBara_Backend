@@ -13,4 +13,5 @@ import java.util.List;
 @AllArgsConstructor
 public class RecommendReqDto {
     private List<VideoHistoryDto> historyList;
+    private String channelName;
 }

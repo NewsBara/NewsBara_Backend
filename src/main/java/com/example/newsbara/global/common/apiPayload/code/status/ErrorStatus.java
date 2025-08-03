@@ -52,7 +52,11 @@ public enum ErrorStatus implements BaseErrorCode {
     EXTERNAL_API_ERROR(HttpStatus.BAD_REQUEST, "API4001", "스크립트 분석 API에 오류가 발생했습니다."),
 
     // 스크립트 관련 에러
-    SCRIPT_IS_NULL(HttpStatus.BAD_REQUEST, "SCRIPT4001", "스크립트가 비어있습니다.");
+    SCRIPT_IS_NULL(HttpStatus.BAD_REQUEST, "SCRIPT4001", "스크립트가 비어있습니다."),
+
+    // 추천 알고리즘 에러
+    CHANNEL_IS_NULL(HttpStatus.BAD_REQUEST, "RECO4001", "채널명은 비어있어선 안됩니다.");
+
 
     private final HttpStatus httpStatus;
     private final String code;

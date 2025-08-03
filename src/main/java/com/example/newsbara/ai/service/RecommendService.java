@@ -3,7 +3,6 @@ package com.example.newsbara.ai.service;
 import com.example.newsbara.ai.dto.req.RecommendReqDto;
 import com.example.newsbara.ai.dto.req.VideoHistoryDto;
 import com.example.newsbara.ai.dto.res.RecommendResDto;
-import com.example.newsbara.ai.dto.res.ExternalApiResponse;
 import com.example.newsbara.global.common.apiPayload.code.status.ErrorStatus;
 import com.example.newsbara.global.common.apiPayload.exception.GeneralException;
 import com.example.newsbara.user.domain.User;
@@ -45,7 +44,7 @@ public class RecommendService {
     }
 
     @Transactional
-    public RecommendResDto getRecommendations(Principal principal) {
+    public RecommendResDto getRecommendations(String channelName, Principal principal) {
         try {
             // 1. 사용자 정보 조회
             User user = userRepository.findByEmail(principal.getName())
@@ -71,7 +70,8 @@ public class RecommendService {
                     ))
                     .collect(Collectors.toList());
 
-            RecommendReqDto requestDto = new RecommendReqDto(historyList);
+
+            RecommendReqDto requestDto = new RecommendReqDto(historyList, channelName);
 
             log.info("Calling ML Recommendation API with {} history items for user: {}",
                     historyList.size(), user.getEmail());

@@ -4,6 +4,8 @@ import com.example.newsbara.ai.dto.res.RecommendResDto;
 import com.example.newsbara.ai.service.ExternalApiService;
 import com.example.newsbara.ai.service.RecommendService;
 import com.example.newsbara.global.common.apiPayload.ApiResponse;
+import com.example.newsbara.global.common.apiPayload.code.status.ErrorStatus;
+import com.example.newsbara.global.common.apiPayload.exception.GeneralException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -24,14 +26,19 @@ public class RecommendController {
         this.recommendService = recommendService;
     }
 
-    @GetMapping("")
+    @GetMapping("/{channelName}")
     @Operation(summary = "메인 화면 추천 동영상 조회 API")
     public ResponseEntity<ApiResponse<RecommendResDto>> getRecommendations(
-            Principal principal) {
+            @PathVariable String channelName, Principal principal) {
 
-        log.info("Received recommendation request for user: {}", principal.getName());
+        if (channelName == null || channelName.trim().isEmpty()) {
+            log.warn("Empty channelName detected before calling ML server");
+            throw new GeneralException(ErrorStatus.CHANNEL_IS_NULL);
+        }
 
-        RecommendResDto responseDto = recommendService.getRecommendations(principal);
+        log.info("Received recommendation request for user: {}, channelName: {}", principal.getName(), channelName);
+
+        RecommendResDto responseDto = recommendService.getRecommendations(channelName, principal);
 
         log.info("Successfully processed recommendation request for user: {}", principal.getName());
 

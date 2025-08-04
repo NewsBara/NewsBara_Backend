@@ -24,17 +24,38 @@ public class RecommendedVideoDto {
             return "00:00:00";
         }
 
-        try {
-            Duration duration = Duration.parse(length);
-            long hours = duration.toHours();
-            long minutes = duration.toMinutesPart();
-            long seconds = duration.toSecondsPart();
+        String timeStr = length.trim();
 
-            return String.format("%02d:%02d:%02d", hours, minutes, seconds);
-        } catch (DateTimeParseException e) {
-            // 파싱 실패시 원본 반환 또는 기본값
-            return "00:00:00";
+        try {
+            // 이미 HH:MM:SS 형태인지 확인
+            if (timeStr.matches("^\\d{2}:\\d{2}:\\d{2}$")) {
+                return timeStr;
+            }
+
+            // MM:SS 형태를 00:MM:SS로 변환
+            if (timeStr.matches("^\\d{1,2}:\\d{2}$")) {
+                String[] parts = timeStr.split(":");
+                int minutes = Integer.parseInt(parts[0]);
+                int seconds = Integer.parseInt(parts[1]);
+                return String.format("00:%02d:%02d", minutes, seconds);
+            }
+
+            // H:MM:SS 형태를 HH:MM:SS로 변환
+            if (timeStr.matches("^\\d{1,2}:\\d{2}:\\d{2}$")) {
+                String[] parts = timeStr.split(":");
+                int hours = Integer.parseInt(parts[0]);
+                int minutes = Integer.parseInt(parts[1]);
+                int seconds = Integer.parseInt(parts[2]);
+                return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+            }
+
+        } catch (Exception e) {
+            // 파싱 실패시 원본 반환
+            return length;
         }
+
+        // 패턴에 맞지 않으면 원본 반환
+        return length;
     }
 
 }

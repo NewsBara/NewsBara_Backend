@@ -43,7 +43,8 @@ public class WebSecurityConfig {
                                 "/swagger-resources/**",
                                 "/webjars/**",
                                 "/hc",
-                                "/env"
+                                "/env",
+                                "/actuator/health", "/actuator/metrics", "/actuator/prometheus", "actuator/info"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

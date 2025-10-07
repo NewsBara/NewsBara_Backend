@@ -51,8 +51,7 @@ dependencies {
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.2'
 
 	// youtube
-	implementation "io.github.thoroldvix:youtube-transcript-api:0.3.6"
-
+	implementation 'io.github.thoroldvix:youtube-transcript-api:0.4.0'
 	// spring ai
 	implementation 'org.springframework.ai:spring-ai-starter-model-openai'
 
@@ -67,6 +66,15 @@ dependencies {
 
 	// Aws s3
 	implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
+
+
+	// Actuator & Prometheus
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'io.micrometer:micrometer-registry-prometheus'
+
+	// 로깅
+	implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+
 }
 
 dependencyManagement {

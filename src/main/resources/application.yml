@@ -72,3 +72,27 @@ spring:
 app:
   temp:
     dir: "/tmp/youtube-transcripts"  # Docker 환경에서 명시적 경로 설정
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,metrics,prometheus,info"  # 필수 엔드포인트만
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+
+  metrics:
+    distribution:
+      percentiles:
+        http.server.requests: 0.95, 0.99
+# 로그 레벨 설정
+logging:
+  level:
+    com.example.newsbara: INFO
+
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{36}] - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{36}] - %msg%n"
